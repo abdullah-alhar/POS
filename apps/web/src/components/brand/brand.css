@@ -1,0 +1,210 @@
+/*
+ * Startup animation, based on the Marina loader:
+ *   0.00–1.50s  letter outlines draw in, one after another
+ *   0.90–2.00s  letters fill with the brand colour
+ *   1.65–2.15s  "Cellular" slides in and the logo glows
+ *   2.05–2.95s  a light sweeps across the letters
+ *   0.10–2.80s  progress line fills underneath
+ *   3.00–3.50s  everything fades out with a gentle zoom
+ */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    radial-gradient(
+      60% 50% at 50% 46%,
+      color-mix(in oklab, var(--brand) 12%, #08080a) 0%,
+      #08080a 70%
+    ),
+    #08080a;
+  animation: splash-out 0.5s ease 3s forwards;
+}
+.splash[data-leaving='true'] {
+  animation: splash-out 0.3s ease forwards;
+}
+
+.splash-aura {
+  position: absolute;
+  width: min(70vw, 620px);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 65%);
+  opacity: 0;
+  filter: blur(30px);
+  animation: splash-aura 3.4s ease-out forwards;
+}
+
+.splash-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.25rem;
+  width: min(78vw, 520px);
+  animation: splash-zoom 3.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.splash-logo {
+  width: 100%;
+  overflow: visible;
+  animation: splash-glow 1.2s ease 1.65s both;
+}
+
+.splash-letter {
+  fill: var(--brand);
+  fill-opacity: 0;
+  stroke: var(--brand);
+  stroke-width: 1.6;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation:
+    splash-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--i) * 0.12s) forwards,
+    splash-fill 0.45s ease calc(0.9s + var(--i) * 0.12s) forwards;
+}
+
+.splash-cellular {
+  fill: var(--brand);
+  opacity: 0;
+  transform: translateX(28px);
+  animation: splash-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 1.65s forwards;
+}
+
+.splash-shine {
+  transform: translateX(-260px) skewX(-18deg);
+  animation: splash-shine 0.9s cubic-bezier(0.45, 0, 0.25, 1) 2.05s forwards;
+}
+
+.splash-image {
+  max-height: 180px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  opacity: 0;
+  animation:
+    splash-image-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s forwards,
+    splash-glow 1.2s ease 1.1s both;
+}
+
+.splash-progress {
+  position: relative;
+  width: 46%;
+  height: 2px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.08);
+  overflow: hidden;
+}
+.splash-progress::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--brand);
+  box-shadow: 0 0 12px var(--glow);
+  transform-origin: left;
+  transform: scaleX(0);
+  animation: splash-progress 2.7s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
+}
+
+@keyframes splash-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes splash-fill {
+  to {
+    fill-opacity: 1;
+    stroke-opacity: 0;
+  }
+}
+@keyframes splash-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes splash-glow {
+  50% {
+    filter: drop-shadow(0 0 30px var(--glow));
+  }
+  to {
+    filter: drop-shadow(0 0 14px var(--glow));
+  }
+}
+@keyframes splash-shine {
+  to {
+    transform: translateX(860px) skewX(-18deg);
+  }
+}
+@keyframes splash-image-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes splash-aura {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+}
+@keyframes splash-zoom {
+  0% {
+    transform: scale(0.94);
+  }
+  85% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.04);
+  }
+}
+@keyframes splash-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes splash-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Small entrance for the logo on the login screen. */
+.logo-enter {
+  animation: splash-image-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash,
+  .splash * {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+  }
+  .splash {
+    animation: splash-out 0.3s ease 0.8s forwards !important;
+  }
+  .logo-enter {
+    animation: none;
+  }
+}

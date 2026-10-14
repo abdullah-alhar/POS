@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marina Cellular</title>
+    <script>
+      // Apply the saved theme before the first paint, so there is no white flash in dark mode.
+      try {
+        var t = localStorage.getItem('pos-theme') || 'light';
+        var dark =
+          t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // If the app fails to start, show why instead of an empty page.
+      (function () {
+        function show(message) {
+          var root = document.getElementById('root');
+          if (!root || root.childElementCount) return;
+          root.innerHTML =
+            '<div style="font:15px system-ui,sans-serif;max-width:640px;margin:15vh auto;padding:24px;border:1px solid #f3c2c4;border-radius:12px;background:#fff;color:#18181b">' +
+            '<p style="font-size:20px;font-weight:600;margin:0 0 8px">Marina POS could not start</p>' +
+            '<p style="margin:0 0 12px;color:#52525b">Press F5 to try again. If it keeps happening, send a photo of this screen.</p>' +
+            '<pre style="white-space:pre-wrap;background:#f4f4f5;padding:12px;border-radius:8px;color:#b91c1c;margin:0"></pre></div>';
+          root.querySelector('pre').textContent = String(message);
+        }
+        window.addEventListener('error', function (e) {
+          show(e.error && e.error.stack ? e.error.stack : e.message);
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          show(e.reason && e.reason.stack ? e.reason.stack : e.reason);
+        });
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

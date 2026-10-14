@@ -1,0 +1,704 @@
+// Marina POS database schema.
+// Money is always an Int number of cents. Percentages are Int basis points (1000 = 10%).
+// Bills, payments, stock movements and the audit log are never deleted (enforced by triggers).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  /// The app maker: everything, including branding for each shop.
+  SUPER_ADMIN
+  /// The shop owner.
+  ADMIN
+  CASHIER
+}
+
+enum PriceMode {
+  RETAIL
+  WHOLESALE
+}
+
+enum DiscountType {
+  AMOUNT
+  PERCENT
+}
+
+enum SaleStatus {
+  COMPLETED
+  VOIDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  CREDIT
+}
+
+enum StockMovementType {
+  OPENING
+  SALE
+  SALE_VOID
+  RETURN
+  PURCHASE
+  ADJUSTMENT
+}
+
+enum AdjustmentReason {
+  DAMAGED
+  LOST
+  COUNT_CORRECTION
+  OTHER
+}
+
+enum PurchaseStatus {
+  DRAFT
+  RECEIVED
+  CANCELLED
+}
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+}
+
+enum LedgerEntryType {
+  CREDIT_SALE
+  PAYMENT
+  RETURN
+  ADJUSTMENT
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashMovementType {
+  CASH_IN
+  CASH_OUT
+}
+
+enum RefundMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  ACCOUNT
+}
+
+enum ExpensePaidFrom {
+  /// Cash taken from the till drawer (counts in the day's cash).
+  DRAWER
+  BANK
+  OTHER
+}
+
+enum BackupKind {
+  AUTO
+  MANUAL
+  PRE_RESTORE
+  PRE_UPDATE
+}
+
+enum BackupStatus {
+  OK
+  FAILED
+}
+
+// ───────────────────────── Users & system ─────────────────────────
+
+model User {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  username     String    @unique
+  fullName     String
+  role         Role
+  passwordHash String
+  pinHash      String
+  permissions  String[]
+  isActive     Boolean   @default(true)
+  /// Profile photo as a small data URL (shrunk to 256 px in the browser).
+  avatar       String?
+  /// Increase to log the user out everywhere (password change, deactivation).
+  tokenVersion Int       @default(0)
+  lastLoginAt  DateTime? @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+
+  auditLogs         AuditLog[]        @relation("AuditActor")
+  auditApprovals    AuditLog[]        @relation("AuditApprover")
+  settingsChanged   Setting[]
+  stockMovements    StockMovement[]
+  adjustments       StockAdjustment[] @relation("AdjustmentUser")
+  adjustApprovals   StockAdjustment[] @relation("AdjustmentApprover")
+  salesMade         Sale[]            @relation("SaleCashier")
+  salesVoided       Sale[]            @relation("SaleVoidedBy")
+  voidApprovals     Sale[]            @relation("SaleVoidApprover")
+  discountApprovals Sale[]            @relation("SaleDiscountApprover")
+  priceApprovals    SaleItem[]        @relation("SaleItemPriceApprover")
+  heldBills         HeldBill[]
+  returns           SaleReturn[]      @relation("ReturnUser")
+  returnApprovals   SaleReturn[]      @relation("ReturnApprover")
+  purchasesCreated  Purchase[]        @relation("PurchaseCreator")
+  purchasesReceived Purchase[]        @relation("PurchaseReceiver")
+  supplierPayments  SupplierPayment[]
+  ledgerEntries     CustomerLedger[]
+  sessionsOpened    CashSession[]     @relation("SessionOpener")
+  sessionsClosed    CashSession[]     @relation("SessionCloser")
+  cashMovements     CashMovement[]    @relation("CashMovementUser")
+  expenses          Expense[]
+  cashApprovals     CashMovement[]    @relation("CashMovementApprover")
+}
+
+/// One row per settings section (shop, receipt, tax, pos, approvals …). Value is validated by Zod.
+model Setting {
+  key         String   @id
+  value       Json
+  updatedById String?  @db.Uuid
+  updatedBy   User?    @relation(fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+}
+
+/// Gap-free running numbers (INV-2026, RET-2026, PUR-2026, SKU, BARCODE …).
+/// Read and increased with a row lock inside the same transaction as the document.
+model DocumentCounter {
+  key   String @id
+  value Int    @default(0)
+}
+
+/// Append-only history of who did what. A trigger blocks UPDATE and DELETE.
+model AuditLog {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  userId       String?  @db.Uuid
+  user         User?    @relation("AuditActor", fields: [userId], references: [id])
+  approvedById String?  @db.Uuid
+  approvedBy   User?    @relation("AuditApprover", fields: [approvedById], references: [id])
+  action       String
+  entityType   String?
+  entityId     String?
+  summary      String?
+  before       Json?
+  after        Json?
+  meta         Json?
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@index([action, createdAt])
+}
+
+model Backup {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  fileName        String
+  path            String
+  sizeBytes       BigInt       @default(0)
+  kind            BackupKind
+  status          BackupStatus
+  error           String?
+  copiedToUsb     Boolean      @default(false)
+  uploadedToDrive Boolean      @default(false)
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([createdAt])
+}
+
+// ───────────────────────────── Catalog ─────────────────────────────
+
+model Category {
+  id        String     @id @default(uuid(7)) @db.Uuid
+  name      String     @unique
+  parentId  String?    @db.Uuid
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+  createdAt DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @db.Timestamptz(3)
+}
+
+model Brand {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  name      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+}
+
+model TaxRate {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  name      String    @unique
+  rateBp    Int
+  isDefault Boolean   @default(false)
+  products  Product[]
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+}
+
+model Product {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  name         String
+  description  String?
+  categoryId   String?          @db.Uuid
+  category     Category?        @relation(fields: [categoryId], references: [id])
+  brandId      String?          @db.Uuid
+  brand        Brand?           @relation(fields: [brandId], references: [id])
+  /// null = use the default tax rate.
+  taxRateId    String?          @db.Uuid
+  taxRate      TaxRate?         @relation(fields: [taxRateId], references: [id])
+  trackStock   Boolean          @default(true)
+  /// Warranty given with the item, in days (0 = none). Printed on the receipt.
+  warrantyDays Int              @default(0)
+  /// Ask for the serial number / IMEI when it is sold (one per bill line).
+  trackSerial  Boolean          @default(false)
+  isActive     Boolean          @default(true)
+  variants     ProductVariant[]
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
+
+  @@index([name])
+  @@index([categoryId])
+  @@index([brandId])
+}
+
+/// The sellable item. Every product has at least one variant.
+model ProductVariant {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  productId      String   @db.Uuid
+  product        Product  @relation(fields: [productId], references: [id])
+  sku            String   @unique
+  /// e.g. "Black / iPhone 15". Empty for single-variant products.
+  name           String   @default("")
+  attributes     Json     @default("{}")
+  /// Weighted average cost, updated when purchases are received.
+  costPrice      Int      @default(0)
+  retailPrice    Int
+  wholesalePrice Int
+  /// Cached stock level; StockMovement holds the full history.
+  stockQty       Int      @default(0)
+  reorderLevel   Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  barcodes        Barcode[]
+  stockMovements  StockMovement[]
+  adjustmentItems StockAdjustmentItem[]
+  purchaseItems   PurchaseItem[]
+  saleItems       SaleItem[]
+  returnItems     SaleReturnItem[]
+
+  @@index([productId])
+}
+
+/// A variant can have several barcodes (maker's barcode and our own in-store one).
+model Barcode {
+  code      String         @id
+  variantId String         @db.Uuid
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([variantId])
+}
+
+// ───────────────────────────── Stock ─────────────────────────────
+
+/// Every change to stock, ever. Never updated or deleted (trigger).
+model StockMovement {
+  id        String            @id @default(uuid(7)) @db.Uuid
+  variantId String            @db.Uuid
+  variant   ProductVariant    @relation(fields: [variantId], references: [id])
+  type      StockMovementType
+  qtyChange Int
+  qtyAfter  Int
+  unitCost  Int               @default(0)
+  /// What caused it: "Sale", "SaleReturn", "Purchase", "StockAdjustment", "Product".
+  refType   String?
+  refId     String?           @db.Uuid
+  note      String?
+  userId    String?           @db.Uuid
+  user      User?             @relation(fields: [userId], references: [id])
+  createdAt DateTime          @default(now()) @db.Timestamptz(3)
+
+  @@index([variantId, createdAt])
+  @@index([refType, refId])
+  @@index([createdAt])
+}
+
+model StockAdjustment {
+  id           String                @id @default(uuid(7)) @db.Uuid
+  number       String                @unique
+  reason       AdjustmentReason
+  note         String?
+  userId       String                @db.Uuid
+  user         User                  @relation("AdjustmentUser", fields: [userId], references: [id])
+  approvedById String?               @db.Uuid
+  approvedBy   User?                 @relation("AdjustmentApprover", fields: [approvedById], references: [id])
+  items        StockAdjustmentItem[]
+  createdAt    DateTime              @default(now()) @db.Timestamptz(3)
+}
+
+model StockAdjustmentItem {
+  id           String          @id @default(uuid(7)) @db.Uuid
+  adjustmentId String          @db.Uuid
+  adjustment   StockAdjustment @relation(fields: [adjustmentId], references: [id])
+  variantId    String          @db.Uuid
+  variant      ProductVariant  @relation(fields: [variantId], references: [id])
+  qtyChange    Int
+  unitCost     Int             @default(0)
+
+  @@index([adjustmentId])
+}
+
+// ─────────────────────── Suppliers & purchases ───────────────────────
+
+model Supplier {
+  id          String            @id @default(uuid(7)) @db.Uuid
+  name        String            @unique
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  isActive    Boolean           @default(true)
+  purchases   Purchase[]
+  payments    SupplierPayment[]
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
+}
+
+model Purchase {
+  id                String            @id @default(uuid(7)) @db.Uuid
+  number            String            @unique
+  supplierId        String            @db.Uuid
+  supplier          Supplier          @relation(fields: [supplierId], references: [id])
+  supplierInvoiceNo String?
+  invoiceDate       DateTime          @db.Date
+  status            PurchaseStatus    @default(DRAFT)
+  subtotal          Int               @default(0)
+  discount          Int               @default(0)
+  taxTotal          Int               @default(0)
+  total             Int               @default(0)
+  paidAmount        Int               @default(0)
+  note              String?
+  createdById       String            @db.Uuid
+  createdBy         User              @relation("PurchaseCreator", fields: [createdById], references: [id])
+  receivedById      String?           @db.Uuid
+  receivedBy        User?             @relation("PurchaseReceiver", fields: [receivedById], references: [id])
+  receivedAt        DateTime?         @db.Timestamptz(3)
+  items             PurchaseItem[]
+  payments          SupplierPayment[]
+  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+
+  @@index([supplierId])
+  @@index([invoiceDate])
+}
+
+model PurchaseItem {
+  id         String         @id @default(uuid(7)) @db.Uuid
+  purchaseId String         @db.Uuid
+  purchase   Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  variantId  String         @db.Uuid
+  variant    ProductVariant @relation(fields: [variantId], references: [id])
+  qty        Int
+  unitCost   Int
+  lineTotal  Int
+
+  @@index([purchaseId])
+  @@index([variantId])
+}
+
+model SupplierPayment {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  supplierId String        @db.Uuid
+  supplier   Supplier      @relation(fields: [supplierId], references: [id])
+  purchaseId String?       @db.Uuid
+  purchase   Purchase?     @relation(fields: [purchaseId], references: [id])
+  amount     Int
+  method     PaymentMethod
+  reference  String?
+  note       String?
+  userId     String        @db.Uuid
+  user       User          @relation(fields: [userId], references: [id])
+  createdAt  DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([supplierId])
+}
+
+// ───────────────────────────── Customers ─────────────────────────────
+
+model Customer {
+  id          String           @id @default(uuid(7)) @db.Uuid
+  name        String
+  phone       String?          @unique
+  email       String?
+  address     String?
+  type        CustomerType     @default(RETAIL)
+  creditLimit Int              @default(0)
+  /// What the customer owes the shop (cached; CustomerLedger is the history).
+  balance     Int              @default(0)
+  notes       String?
+  isActive    Boolean          @default(true)
+  sales       Sale[]
+  returns     SaleReturn[]
+  heldBills   HeldBill[]
+  ledger      CustomerLedger[]
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+
+  @@index([name])
+}
+
+model CustomerLedger {
+  id            String          @id @default(uuid(7)) @db.Uuid
+  customerId    String          @db.Uuid
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  type          LedgerEntryType
+  /// Positive: customer owes more. Negative: customer paid or got credit back.
+  amount        Int
+  balanceAfter  Int
+  method        PaymentMethod?
+  reference     String?
+  refType       String?
+  refId         String?         @db.Uuid
+  note          String?
+  userId        String          @db.Uuid
+  user          User            @relation(fields: [userId], references: [id])
+  /// The day a cash payment went into the drawer.
+  cashSessionId String?         @db.Uuid
+  cashSession   CashSession?    @relation(fields: [cashSessionId], references: [id])
+  createdAt     DateTime        @default(now()) @db.Timestamptz(3)
+
+  @@index([customerId, createdAt])
+  @@index([cashSessionId])
+}
+
+// ─────────────────────────── Cash register ───────────────────────────
+
+model CashSession {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  status        CashSessionStatus @default(OPEN)
+  openedById    String            @db.Uuid
+  openedBy      User              @relation("SessionOpener", fields: [openedById], references: [id])
+  openedAt      DateTime          @default(now()) @db.Timestamptz(3)
+  openingCash   Int
+  closedById    String?           @db.Uuid
+  closedBy      User?             @relation("SessionCloser", fields: [closedById], references: [id])
+  closedAt      DateTime?         @db.Timestamptz(3)
+  expectedCash  Int?
+  countedCash   Int?
+  difference    Int?
+  /// Count of notes and coins at closing, e.g. {"5000": 3, "1000": 7}.
+  denominations Json?
+  note          String?
+  sales         Sale[]
+  returns       SaleReturn[]
+  movements     CashMovement[]
+  ledger        CustomerLedger[]
+  expenses      Expense[]
+
+  @@index([status])
+  @@index([openedAt])
+}
+
+model CashMovement {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  sessionId    String           @db.Uuid
+  session      CashSession      @relation(fields: [sessionId], references: [id])
+  type         CashMovementType
+  amount       Int
+  reason       String
+  userId       String           @db.Uuid
+  user         User             @relation("CashMovementUser", fields: [userId], references: [id])
+  approvedById String?          @db.Uuid
+  approvedBy   User?            @relation("CashMovementApprover", fields: [approvedById], references: [id])
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([sessionId])
+}
+
+// ───────────────────────────── Sales ─────────────────────────────
+
+/// A bill. Never deleted (trigger); cancelled bills are VOIDED with a reason.
+model Sale {
+  id                   String        @id @default(uuid(7)) @db.Uuid
+  /// Made by the browser before checkout, so a retried checkout never creates two bills.
+  clientId             String        @unique @db.Uuid
+  /// INV-2026-000123
+  number               String        @unique
+  status               SaleStatus    @default(COMPLETED)
+  priceMode            PriceMode
+  customerId           String?       @db.Uuid
+  customer             Customer?     @relation(fields: [customerId], references: [id])
+  cashierId            String        @db.Uuid
+  cashier              User          @relation("SaleCashier", fields: [cashierId], references: [id])
+  cashSessionId        String?       @db.Uuid
+  cashSession          CashSession?  @relation(fields: [cashSessionId], references: [id])
+  subtotal             Int
+  itemDiscountTotal    Int           @default(0)
+  billDiscountType     DiscountType?
+  billDiscountValue    Int?
+  billDiscountAmount   Int           @default(0)
+  taxTotal             Int           @default(0)
+  roundingAdjustment   Int           @default(0)
+  total                Int
+  paidTotal            Int
+  changeGiven          Int           @default(0)
+  costTotal            Int           @default(0)
+  note                 String?
+  discountApprovedById String?       @db.Uuid
+  discountApprovedBy   User?         @relation("SaleDiscountApprover", fields: [discountApprovedById], references: [id])
+  createdAt            DateTime      @default(now()) @db.Timestamptz(3)
+  voidedAt             DateTime?     @db.Timestamptz(3)
+  voidedById           String?       @db.Uuid
+  voidedBy             User?         @relation("SaleVoidedBy", fields: [voidedById], references: [id])
+  voidApprovedById     String?       @db.Uuid
+  voidApprovedBy       User?         @relation("SaleVoidApprover", fields: [voidApprovedById], references: [id])
+  voidReason           String?
+  items                SaleItem[]
+  payments             Payment[]
+  returns              SaleReturn[]
+
+  @@index([createdAt])
+  @@index([cashierId, createdAt])
+  @@index([customerId])
+  @@index([status, createdAt])
+  @@index([cashSessionId])
+}
+
+model SaleItem {
+  id                String           @id @default(uuid(7)) @db.Uuid
+  saleId            String           @db.Uuid
+  sale              Sale             @relation(fields: [saleId], references: [id])
+  /// Position on the bill (1, 2, 3 …), so receipts keep the order items were scanned.
+  lineNo            Int              @default(0)
+  variantId         String           @db.Uuid
+  variant           ProductVariant   @relation(fields: [variantId], references: [id])
+  productName       String
+  variantName       String
+  sku               String
+  qty               Int
+  /// Normal retail or wholesale price at the time of sale.
+  listPrice         Int
+  /// Price actually charged per unit (differs from listPrice after a price override).
+  unitPrice         Int
+  priceApprovedById String?          @db.Uuid
+  priceApprovedBy   User?            @relation("SaleItemPriceApprover", fields: [priceApprovedById], references: [id])
+  discountType      DiscountType?
+  discountValue     Int?
+  discountAmount    Int              @default(0)
+  billDiscountShare Int              @default(0)
+  taxRateBp         Int              @default(0)
+  taxAmount         Int              @default(0)
+  lineTotal         Int
+  unitCost          Int              @default(0)
+  /// Copied from the product at the time of sale.
+  warrantyDays      Int              @default(0)
+  /// Serial number / IMEI of the item sold.
+  serialNo          String?
+  returnedQty       Int              @default(0)
+  returnItems       SaleReturnItem[]
+
+  @@index([saleId])
+  @@index([variantId])
+  @@index([serialNo])
+}
+
+model Payment {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  saleId    String        @db.Uuid
+  sale      Sale          @relation(fields: [saleId], references: [id])
+  method    PaymentMethod
+  /// Amount applied to the bill.
+  amount    Int
+  /// Cash handed over by the customer (change = tendered − amount).
+  tendered  Int?
+  /// Card slip number, bank transfer reference …
+  reference String?
+  createdAt DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([saleId])
+}
+
+/// A parked cart. Not a bill: it is removed once recalled.
+model HeldBill {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  label      String?
+  cart       Json
+  customerId String?   @db.Uuid
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id])
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+}
+
+model SaleReturn {
+  id            String           @id @default(uuid(7)) @db.Uuid
+  /// RET-2026-000045
+  number        String           @unique
+  saleId        String           @db.Uuid
+  sale          Sale             @relation(fields: [saleId], references: [id])
+  customerId    String?          @db.Uuid
+  customer      Customer?        @relation(fields: [customerId], references: [id])
+  userId        String           @db.Uuid
+  user          User             @relation("ReturnUser", fields: [userId], references: [id])
+  approvedById  String?          @db.Uuid
+  approvedBy    User?            @relation("ReturnApprover", fields: [approvedById], references: [id])
+  cashSessionId String?          @db.Uuid
+  cashSession   CashSession?     @relation(fields: [cashSessionId], references: [id])
+  reason        String
+  taxTotal      Int              @default(0)
+  total         Int
+  refundMethod  RefundMethod
+  items         SaleReturnItem[]
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([saleId])
+  @@index([createdAt])
+}
+
+model SaleReturnItem {
+  id           String         @id @default(uuid(7)) @db.Uuid
+  returnId     String         @db.Uuid
+  saleReturn   SaleReturn     @relation(fields: [returnId], references: [id])
+  saleItemId   String         @db.Uuid
+  saleItem     SaleItem       @relation(fields: [saleItemId], references: [id])
+  variantId    String         @db.Uuid
+  variant      ProductVariant @relation(fields: [variantId], references: [id])
+  qty          Int
+  refundAmount Int
+  taxAmount    Int            @default(0)
+  /// false for damaged items that should not go back on the shelf.
+  restock      Boolean        @default(true)
+
+  @@index([returnId])
+}
+
+/// Shop expenses (rent, electricity, salaries …), so reports show real profit.
+model Expense {
+  id            String          @id @default(uuid(7)) @db.Uuid
+  number        String          @unique
+  date          DateTime        @db.Date
+  category      String
+  amount        Int
+  paidFrom      ExpensePaidFrom
+  note          String?
+  cashSessionId String?         @db.Uuid
+  cashSession   CashSession?    @relation(fields: [cashSessionId], references: [id])
+  userId        String          @db.Uuid
+  user          User            @relation(fields: [userId], references: [id])
+  /// Expenses are cancelled, not deleted, so the history stays complete.
+  cancelledAt   DateTime?       @db.Timestamptz(3)
+  cancelReason  String?
+  createdAt     DateTime        @default(now()) @db.Timestamptz(3)
+
+  @@index([date])
+}

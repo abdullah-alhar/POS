@@ -1,0 +1,19 @@
+node_modules
+dist
+coverage
+.env
+.env.*
+!.env.example
+apps/api/src/generated
+apps/api/storage
+release
+*.log
+.DS_Store
+
+# Design source files are large; keep them out of git (the app uses the vector paths in code).
+assets/**/*.ai
+assets/**/*.psd
+apps/api/storage*
+
+# Local temporary files (tests, tools)
+.scratch

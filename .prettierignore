@@ -1,0 +1,8 @@
+dist
+node_modules
+pnpm-lock.yaml
+apps/api/src/generated
+apps/api/prisma/migrations
+apps/web/src/components/ui
+coverage
+.scratch
