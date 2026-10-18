@@ -1,4 +1,4 @@
-import type { PosIndexItem } from '@marina/shared';
+import type { PosIndexItem } from '@shoppos/shared';
 
 /**
  * Local search over the in-memory catalogue: every word must appear in the name, SKU, brand or

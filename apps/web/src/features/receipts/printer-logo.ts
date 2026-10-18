@@ -1,17 +1,17 @@
-import type { PrinterLogo } from '@marina/shared';
-import { marinaLogoSvg } from './receipt-html';
+import type { PrinterLogo } from '@shoppos/shared';
+import { builtInLogoSvg } from './receipt-html';
 
 /**
  * Turns the shop logo into black-and-white dots for the thermal printer (the printer cannot
  * read PNG or SVG). Done in the browser, then saved with the printer settings.
  */
 export async function buildPrinterLogo(logo: string | null, widthDots = 320): Promise<PrinterLogo> {
-  const src = logo ?? `data:image/svg+xml;base64,${btoa(marinaLogoSvg('#000', 681, 158))}`;
+  const src = logo ?? `data:image/svg+xml;base64,${btoa(builtInLogoSvg('#000', 525, 120))}`;
   const img = new Image();
   img.src = src;
   await img.decode();
   const width = Math.round(widthDots / 8) * 8;
-  const ratio = (img.naturalHeight || 158) / (img.naturalWidth || 681);
+  const ratio = (img.naturalHeight || 120) / (img.naturalWidth || 525);
   const height = Math.max(1, Math.min(200, Math.round(width * ratio)));
 
   const canvas = document.createElement('canvas');

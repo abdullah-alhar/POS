@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Printer, Tags, Trash2 } from 'lucide-react';
-import type { PosIndexItem } from '@marina/shared';
+import type { PosIndexItem } from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { FormField } from '@/components/form-field';
 import { ItemSearch } from '@/components/item-search';

@@ -10,7 +10,7 @@ import type {
   PosIndexItem,
   PriceMode,
   ReceiptDoc,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useCan } from '@/lib/auth';
 import { api, ApiError } from '@/lib/api';

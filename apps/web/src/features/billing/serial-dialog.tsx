@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Smartphone } from 'lucide-react';
-import { warrantyLabel, type PosIndexItem } from '@marina/shared';
+import { warrantyLabel, type PosIndexItem } from '@shoppos/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

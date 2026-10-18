@@ -16,7 +16,7 @@ import {
   type BrandInput,
   type CategoryInput,
   type TaxRateInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { LookupsService } from './lookups.service';

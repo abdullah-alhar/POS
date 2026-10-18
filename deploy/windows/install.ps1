@@ -1,19 +1,19 @@
 <#
-  Marina POS - Windows installer.
+  ShopPOS - Windows installer.
 
   What it does (safe to run again; it keeps existing data and passwords):
     0. Checks the computer: Windows version, processor (x64 / ARM64), disk space, internet,
        Node.js, PostgreSQL, Chrome and port 80, and shows a checklist
     1. Node.js: uses the copy in .\vendor, or a suitable Node.js already installed, or downloads it
     2. PostgreSQL: uses .\vendor, or a PostgreSQL already installed (14 or newer), or downloads it
-    3. Copies the app to C:\MarinaPOS, creates the database and runs the database updates
+    3. Copies the app to C:\ShopPOS, creates the database and runs the database updates
     4. Installs two Windows services that start automatically:
-         MarinaPOS-DB  (PostgreSQL)      MarinaPOS  (the POS server on port 80)
+         ShopPOS-DB  (PostgreSQL)      ShopPOS  (the POS server on port 80)
     5. Adds "pos.shop" to the hosts file
     6. Sets up HTTPS (padlock): a certificate authority for this laptop only, trusted by Windows
     7. Opens Chrome (or Edge) in kiosk mode at every Windows start
 
-  Everything is written to C:\MarinaPOS\logs\install.log, so problems can be checked later.
+  Everything is written to C:\ShopPOS\logs\install.log, so problems can be checked later.
 
   Run INSTALL.cmd (it asks for administrator rights), or from an admin PowerShell:
     powershell -ExecutionPolicy Bypass -File .\install.ps1             (real shop: asks for passwords)
@@ -23,7 +23,7 @@
 #>
 [CmdletBinding()]
 param(
-  [string]$Root = 'C:\MarinaPOS',
+  [string]$Root = 'C:\ShopPOS',
   # https://pos.shop runs on HttpsPort; plain http on Port only redirects to it.
   [int]$Port = 80,
   [int]$HttpsPort = 443,
@@ -302,7 +302,7 @@ $vendor = Join-Path $Here 'vendor'
 New-Item -ItemType Directory -Force -Path $vendor | Out-Null
 
 Write-Host ''
-Write-Host '  Marina POS installer' -ForegroundColor White
+Write-Host '  ShopPOS installer' -ForegroundColor White
 $SiteUrl = "https://$HostName$(if ($HttpsPort -ne 443) { ":$HttpsPort" })"
 Write-Host "  Folder: $Root    Address: $SiteUrl"
 
@@ -311,15 +311,15 @@ Step 'Checking this computer'
 $os = Get-CimInstance Win32_OperatingSystem
 $build = [int]$os.BuildNumber
 Check ($build -ge 17763) 'Windows' "$($os.Caption) (build $build)"
-if ($build -lt 17763) { Fail 'Marina POS needs Windows 10 (version 1809 or newer) or Windows 11. Please update Windows.' }
+if ($build -lt 17763) { Fail 'ShopPOS needs Windows 10 (version 1809 or newer) or Windows 11. Please update Windows.' }
 
 $arch = Get-OsArchitecture
 if ($arch -eq 'x86') {
   Check $false 'Processor' '32-bit Windows'
-  Fail 'Marina POS needs 64-bit Windows (x64 or ARM64). PostgreSQL does not run on 32-bit Windows.'
+  Fail 'ShopPOS needs 64-bit Windows (x64 or ARM64). PostgreSQL does not run on 32-bit Windows.'
 }
 Check $true 'Processor' "$arch$(if ($arch -eq 'arm64') { ' (the database runs in x64 compatibility mode, Windows 11 needed)' })"
-if ($arch -eq 'arm64' -and $build -lt 22000) { Fail 'On ARM processors Marina POS needs Windows 11.' }
+if ($arch -eq 'arm64' -and $build -lt 22000) { Fail 'On ARM processors ShopPOS needs Windows 11.' }
 
 $drive = (Split-Path -Qualifier $Root).TrimEnd(':')
 $freeGb = [math]::Round((Get-PSDrive $drive).Free / 1GB, 1)
@@ -332,7 +332,7 @@ Check ($(if ($ramGb -ge 4) { $true } else { 'warn' })) 'Memory' "$ramGb GB"
 $systemNode = Find-InstalledNode $arch
 $myNode = Join-Path $Root 'node\node.exe'
 if (Test-Path $myNode) {
-  Check $true 'Node.js' "already set up for Marina POS ($(& $myNode --version))"
+  Check $true 'Node.js' "already set up for ShopPOS ($(& $myNode --version))"
 } elseif ($systemNode -and $systemNode.Suitable) {
   Check $true 'Node.js' "installed: v$($systemNode.Version) $($systemNode.Arch) at $($systemNode.Path) (will be used)"
 } elseif ($systemNode) {
@@ -343,7 +343,7 @@ if (Test-Path $myNode) {
 
 $systemPg = Find-InstalledPostgres
 if (Test-Path (Join-Path $Root 'pgsql\bin\postgres.exe')) {
-  Check $true 'PostgreSQL' 'already set up for Marina POS'
+  Check $true 'PostgreSQL' 'already set up for ShopPOS'
 } elseif ($systemPg) {
   Check $true 'PostgreSQL' "installed: version $($systemPg.Version) at $($systemPg.Dir) (will be used)"
 } else {
@@ -377,7 +377,7 @@ $needNode = -not (Test-Path $myNode) -and -not ($systemNode -and $systemNode.Sui
   -not (Get-ChildItem $vendor -Filter "node-v22*-win-$arch.zip" -ErrorAction SilentlyContinue)
 $needPg = -not (Test-Path (Join-Path $Root 'pgsql\bin\postgres.exe')) -and -not $systemPg -and -not $PostgresZip -and
   -not (Get-ChildItem $vendor -Filter 'postgresql-*-windows-x64-binaries.zip' -ErrorAction SilentlyContinue)
-$needWinSW = -not (Test-Path (Join-Path $Root 'service\MarinaPOS.exe')) -and
+$needWinSW = -not (Test-Path (Join-Path $Root 'service\ShopPOS.exe')) -and
   -not (Get-ChildItem $vendor -Filter 'WinSW-x64*.exe' -ErrorAction SilentlyContinue)
 if ($needNode -or $needPg -or $needWinSW) {
   $nodeOk = Test-Url 'https://nodejs.org/dist/index.json'
@@ -440,7 +440,7 @@ if (Test-Path $nodeExe) {
   try { $nodeOkVersion = [version]((& $nodeExe --version).Trim().TrimStart('v')) -ge $MinNodeVersion } catch { }
 }
 if (-not $nodeOkVersion) {
-  if (Get-Service MarinaPOS -ErrorAction SilentlyContinue) { Stop-Service MarinaPOS -ErrorAction SilentlyContinue }
+  if (Get-Service ShopPOS -ErrorAction SilentlyContinue) { Stop-Service ShopPOS -ErrorAction SilentlyContinue }
   New-Item -ItemType Directory -Force -Path (Split-Path $nodeExe) | Out-Null
   if ($systemNode -and $systemNode.Suitable -and -not $NodeZip) {
     Info "Using the Node.js already installed (v$($systemNode.Version))"
@@ -491,7 +491,7 @@ if (-not $secrets) {
 
 if (-not (Test-Path (Join-Path $pgBin 'postgres.exe'))) {
   if ($systemPg -and -not $PostgresZip) {
-    # Our own copy, so Marina POS keeps working even if that PostgreSQL is removed or upgraded.
+    # Our own copy, so ShopPOS keeps working even if that PostgreSQL is removed or upgraded.
     Info "Copying PostgreSQL $($systemPg.Version) from $($systemPg.Dir)..."
     foreach ($part in 'bin', 'lib', 'share') {
       robocopy (Join-Path $systemPg.Dir $part) (Join-Path $pgDir $part) /E /NFL /NDL /NJH /NJS /NP | Out-Null
@@ -559,7 +559,7 @@ if ((Test-Path $pgDataVersion) -and ($pgVersionText -match '(\d+)\.')) {
   }
 }
 
-if (-not (Get-Service MarinaPOS-DB -ErrorAction SilentlyContinue)) {
+if (-not (Get-Service ShopPOS-DB -ErrorAction SilentlyContinue)) {
   if (-not (Test-Path $pgDataVersion)) {
     # Use 5432 unless another PostgreSQL already uses it.
     if (Get-NetTCPConnection -LocalPort 5432 -State Listen -ErrorAction SilentlyContinue) { $secrets.pgPort = 5433 }
@@ -596,7 +596,7 @@ if (-not (Get-Service MarinaPOS-DB -ErrorAction SilentlyContinue)) {
     # Settings for an i3 laptop with 8 GB of RAM.
     Add-Content (Join-Path $pgData 'postgresql.conf') @"
 
-# --- Marina POS ---
+# --- ShopPOS ---
 listen_addresses = 'localhost'
 port = $($secrets.pgPort)
 max_connections = 40
@@ -615,14 +615,14 @@ log_truncate_on_rotation = on
   icacls $pgData /grant "${NetSvc}:(OI)(CI)F" /T /Q | Out-Null
   icacls (Join-Path $Root 'logs') /grant "${NetSvc}:(OI)(CI)M" /T /Q | Out-Null
   $reg = Invoke-Native (Join-Path $pgBin 'pg_ctl.exe') @(
-    'register', '-N', 'MarinaPOS-DB', '-D', $pgData, '-S', 'auto', '-U', 'NT AUTHORITY\NetworkService'
+    'register', '-N', 'ShopPOS-DB', '-D', $pgData, '-S', 'auto', '-U', 'NT AUTHORITY\NetworkService'
   ) 'pg-register'
   if ($reg.Code -ne 0) { Fail "Could not register the database service: $($reg.Text)" }
 }
 Set-Content -Path $secretsFile -Value ($secrets | ConvertTo-Json) -Encoding utf8
 icacls $secretsFile /inheritance:r /grant:r "${Admins}:F" "${System}:F" /Q | Out-Null
 
-try { Start-Service MarinaPOS-DB } catch {
+try { Start-Service ShopPOS-DB } catch {
   Fail "The database service did not start: $($_.Exception.Message). See $Root\logs\postgresql-*.log and Windows Event Viewer > Application."
 }
 $env:PGPASSWORD = $secrets.pgSuperPassword
@@ -632,16 +632,16 @@ $roleExists = & $psql -h localhost -p $secrets.pgPort -U postgres -tAc "SELECT 1
 if ($roleExists -ne '1') {
   & $psql -h localhost -p $secrets.pgPort -U postgres -qc "CREATE ROLE pos LOGIN PASSWORD '$($secrets.pgAppPassword)'" | Out-Null
 }
-$dbExists = & $psql -h localhost -p $secrets.pgPort -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='marina_pos'"
+$dbExists = & $psql -h localhost -p $secrets.pgPort -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='shoppos'"
 if ($dbExists -ne '1') {
-  & $psql -h localhost -p $secrets.pgPort -U postgres -qc 'CREATE DATABASE marina_pos OWNER pos' | Out-Null
+  & $psql -h localhost -p $secrets.pgPort -U postgres -qc 'CREATE DATABASE shoppos OWNER pos' | Out-Null
 }
 Remove-Item Env:PGPASSWORD
-Ok "PostgreSQL running (service MarinaPOS-DB, port $($secrets.pgPort))"
+Ok "PostgreSQL running (service ShopPOS-DB, port $($secrets.pgPort))"
 
 # ── 3. App files and configuration ────────────────────────────────────────
-Step 'Marina POS app'
-if (Get-Service MarinaPOS -ErrorAction SilentlyContinue) { Stop-Service MarinaPOS -ErrorAction SilentlyContinue }
+Step 'ShopPOS app'
+if (Get-Service ShopPOS -ErrorAction SilentlyContinue) { Stop-Service ShopPOS -ErrorAction SilentlyContinue }
 robocopy (Join-Path $Here 'app') (Join-Path $Root 'app') /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { Fail 'Copying the app files failed.' }
 Copy-Item (Join-Path $Here 'start-pos.ps1') (Join-Path $Root 'start-pos.ps1') -Force
@@ -658,24 +658,24 @@ foreach ($line in $tls.Lines) { Info $line }
 if ($tls.Code -ne 0) { Fail "Could not create the HTTPS certificate: $($tls.Text)" }
 $caFile = Join-Path $tlsDir 'ca.crt'
 $caCert = New-Object Security.Cryptography.X509Certificates.X509Certificate2($caFile)
-Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -like '*Marina POS Local CA*' -and $_.Thumbprint -ne $caCert.Thumbprint } |
+Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -like '*ShopPOS Local CA*' -and $_.Thumbprint -ne $caCert.Thumbprint } |
   Remove-Item -ErrorAction SilentlyContinue
 if (-not (Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Thumbprint -eq $caCert.Thumbprint })) {
   Import-Certificate -FilePath $caFile -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
 }
-Ok "Windows trusts the Marina POS certificate ($SiteUrl shows a padlock)"
+Ok "Windows trusts the ShopPOS certificate ($SiteUrl shows a padlock)"
 
-$envFile = Join-Path $Root 'config\marina-pos.env'
+$envFile = Join-Path $Root 'config\shoppos.env'
 $storage = Join-Path $Root 'data\storage'
 @"
-# Marina POS settings (written by install.ps1). Keep this file private.
+# ShopPOS settings (written by install.ps1). Keep this file private.
 NODE_ENV=production
 PORT=$HttpsPort
 HTTP_PORT=$Port
 HOST=127.0.0.1
 TLS_DIR=$tlsDir
 TLS_HOST=$HostName
-DATABASE_URL=postgresql://pos:$($secrets.pgAppPassword)@localhost:$($secrets.pgPort)/marina_pos
+DATABASE_URL=postgresql://pos:$($secrets.pgAppPassword)@localhost:$($secrets.pgPort)/shoppos
 JWT_SECRET=$($secrets.jwtSecret)
 WEB_DIST_DIR=$(Join-Path $Root 'app\web\dist')
 STORAGE_DIR=$storage
@@ -706,7 +706,7 @@ Ok 'Database ready'
 
 # ── 4. Windows service for the POS server ─────────────────────────────────
 Step 'Windows service'
-$serviceExe = Join-Path $Root 'service\MarinaPOS.exe'
+$serviceExe = Join-Path $Root 'service\ShopPOS.exe'
 if (-not (Test-Path $serviceExe)) {
   # WinSW turns the Node.js server into a Windows service. The x64 build also runs on ARM64 Windows 11.
   $winsw = Get-ChildItem $vendor -Filter 'WinSW-x64*.exe' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
@@ -719,15 +719,15 @@ if (-not (Test-Path $serviceExe)) {
 }
 @"
 <service>
-  <id>MarinaPOS</id>
-  <name>Marina POS</name>
-  <description>Marina POS server (billing, stock and reports). Serves $SiteUrl</description>
+  <id>ShopPOS</id>
+  <name>ShopPOS</name>
+  <description>ShopPOS server (billing, stock and reports). Serves $SiteUrl</description>
   <executable>$nodeExe</executable>
   <arguments>dist\main.js</arguments>
   <workingdirectory>$(Join-Path $Root 'app\api')</workingdirectory>
   <env name="DOTENV_CONFIG_PATH" value="$envFile" />
   <startmode>Automatic</startmode>
-  <depend>MarinaPOS-DB</depend>
+  <depend>ShopPOS-DB</depend>
   <onfailure action="restart" delay="5 sec" />
   <onfailure action="restart" delay="10 sec" />
   <onfailure action="restart" delay="30 sec" />
@@ -739,18 +739,18 @@ if (-not (Test-Path $serviceExe)) {
     <keepFiles>8</keepFiles>
   </log>
 </service>
-"@ | Set-Content -Path (Join-Path $Root 'service\MarinaPOS.xml') -Encoding utf8
+"@ | Set-Content -Path (Join-Path $Root 'service\ShopPOS.xml') -Encoding utf8
 
-if (-not (Get-Service MarinaPOS -ErrorAction SilentlyContinue)) {
+if (-not (Get-Service ShopPOS -ErrorAction SilentlyContinue)) {
   & $serviceExe install | Out-Null
-  if ($LASTEXITCODE -ne 0) { Fail 'Could not install the MarinaPOS service.' }
+  if ($LASTEXITCODE -ne 0) { Fail 'Could not install the ShopPOS service.' }
 }
-Start-Service MarinaPOS
+Start-Service ShopPOS
 $healthUrl = "https://127.0.0.1:$HttpsPort/api/health"
 Wait-Until {
   try { (Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch { $false }
 } 60 'The POS server'
-Ok 'POS server running (service MarinaPOS)'
+Ok 'POS server running (service ShopPOS)'
 
 # ── 5. pos.shop address ───────────────────────────────────────────────────
 Step "Address $SiteUrl"
@@ -777,25 +777,25 @@ if (-not $NoKiosk) {
       Set-Content -Path (Join-Path $Root 'config\kiosk.json') -Encoding utf8
     $shell = New-Object -ComObject WScript.Shell
     $targets = @(
-      (Join-Path ([Environment]::GetFolderPath('CommonStartup')) 'Marina POS.lnk'),
-      (Join-Path ([Environment]::GetFolderPath('CommonDesktopDirectory')) 'Marina POS.lnk')
+      (Join-Path ([Environment]::GetFolderPath('CommonStartup')) 'ShopPOS.lnk'),
+      (Join-Path ([Environment]::GetFolderPath('CommonDesktopDirectory')) 'ShopPOS.lnk')
     )
     foreach ($lnk in $targets) {
       $s = $shell.CreateShortcut($lnk)
       $s.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
       $s.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$Root\start-pos.ps1`""
       $s.IconLocation = "$chrome,0"
-      $s.Description = 'Open Marina POS'
+      $s.Description = 'Open ShopPOS'
       $s.Save()
     }
-    Ok "$(Split-Path $chrome -Leaf) opens Marina POS full screen at every Windows start (and from the desktop icon)"
+    Ok "$(Split-Path $chrome -Leaf) opens ShopPOS full screen at every Windows start (and from the desktop icon)"
     Info 'To leave full screen: user menu > Exit full-screen POS, or press Alt+F4.'
   }
 }
 
 Write-Host ''
-Write-Host '  Marina POS is installed.' -ForegroundColor Green
-Write-Host "  Open: $SiteUrl   (or double-click 'Marina POS' on the desktop)"
+Write-Host '  ShopPOS is installed.' -ForegroundColor Green
+Write-Host "  Open: $SiteUrl   (or double-click 'ShopPOS' on the desktop)"
 if (-not $firstInstall) {
   Write-Host '  Existing users, passwords and data were kept.'
 } elseif ($testPasswords) {

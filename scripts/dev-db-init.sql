@@ -1,2 +1,2 @@
 -- Separate database used by the API integration tests.
-CREATE DATABASE marina_pos_test OWNER pos;
+CREATE DATABASE shoppos_test OWNER pos;

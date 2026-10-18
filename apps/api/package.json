@@ -1,5 +1,5 @@
 {
-  "name": "@marina/api",
+  "name": "@shoppos/api",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -17,7 +17,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@marina/shared": "workspace:*",
+    "@shoppos/shared": "workspace:*",
     "@nestjs/common": "^11.1.6",
     "@nestjs/core": "^11.1.6",
     "@nestjs/jwt": "^11.0.0",

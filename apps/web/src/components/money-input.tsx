@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { centsToInput, parseMoney } from '@marina/shared';
+import { centsToInput, parseMoney } from '@shoppos/shared';
 import { Input } from '@/components/ui/input';
 import { usePublicSettings } from '@/lib/queries';
 import { cn } from '@/lib/utils';

@@ -9,7 +9,7 @@ import { CA_NAME, ensureTls } from './tls';
 
 const dirs: string[] = [];
 const tempDir = () => {
-  const d = mkdtempSync(path.join(tmpdir(), 'marina-tls-'));
+  const d = mkdtempSync(path.join(tmpdir(), 'shoppos-tls-'));
   dirs.push(d);
   return d;
 };

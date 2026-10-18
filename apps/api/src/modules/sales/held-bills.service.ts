@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { HeldBillDto, HeldCart, HoldBillInput } from '@marina/shared';
+import type { HeldBillDto, HeldCart, HoldBillInput } from '@shoppos/shared';
 import { notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';

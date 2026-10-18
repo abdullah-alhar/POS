@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
-import type { PosIndexItem } from '@marina/shared';
+import type { PosIndexItem } from '@shoppos/shared';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { searchItems } from '@/features/billing/search';

@@ -2,7 +2,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { PrinterSettings } from '@marina/shared';
+import type { PrinterSettings } from '@shoppos/shared';
 import { runPowerShell } from '../../common/powershell';
 
 /**
@@ -17,7 +17,7 @@ export class PrinterError extends Error {}
 const RAW_PRINTER_CS = `
 using System;
 using System.Runtime.InteropServices;
-namespace MarinaPos {
+namespace ShopPos {
   public static class RawPrinter {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     public class DOCINFO {
@@ -41,7 +41,7 @@ namespace MarinaPos {
       if (!OpenPrinter(printer, out h, IntPtr.Zero)) throw new Exception("Printer not found: " + printer);
       try {
         DOCINFO info = new DOCINFO();
-        info.pDocName = "Marina POS receipt";
+        info.pDocName = "ShopPOS receipt";
         info.pDataType = "RAW";
         if (StartDocPrinter(h, 1, info) == 0) throw new Exception("The printer did not accept the job");
         StartPagePrinter(h);
@@ -66,7 +66,7 @@ if (-not (Test-Path $dll)) {
   Add-Type -TypeDefinition $source -OutputAssembly $dll -OutputType Library
 }
 Add-Type -Path $dll
-[MarinaPos.RawPrinter]::Send($env:POS_PRINTER, [IO.File]::ReadAllBytes($env:POS_FILE))
+[ShopPos.RawPrinter]::Send($env:POS_PRINTER, [IO.File]::ReadAllBytes($env:POS_FILE))
 `;
 
 const LIST_SCRIPT = `
@@ -108,13 +108,13 @@ async function sendWindows(
   await mkdir(dir, { recursive: true });
   const csFile = path.join(dir, 'RawPrinter.cs');
   await writeFile(csFile, RAW_PRINTER_CS);
-  const jobFile = path.join(tmpdir(), `marina-pos-${process.pid}-${Date.now()}.bin`);
+  const jobFile = path.join(tmpdir(), `shoppos-${process.pid}-${Date.now()}.bin`);
   await writeFile(jobFile, bytes);
   try {
     await powershell(
       SEND_SCRIPT,
       {
-        POS_RAW_DLL: path.join(dir, 'MarinaPosRawPrinter.dll'),
+        POS_RAW_DLL: path.join(dir, 'ShopPosRawPrinter.dll'),
         POS_RAW_CS: csFile,
         POS_PRINTER: printerName,
         POS_FILE: jobFile,

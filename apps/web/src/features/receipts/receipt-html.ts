@@ -1,6 +1,6 @@
 import qrcode from 'qrcode-generator';
-import { code128Svg, type ReceiptBlock, type ReceiptDoc } from '@marina/shared';
-import { MARINA_CELLULAR, MARINA_LETTERS, MARINA_VIEWBOX } from '@/components/brand/marina-paths';
+import { code128Svg, type ReceiptBlock, type ReceiptDoc } from '@shoppos/shared';
+import { LOGO_MARK, LOGO_VIEWBOX, LOGO_WORDMARK } from '@/components/brand/logo-paths';
 
 const escape = (s: string) =>
   s.replace(
@@ -9,10 +9,10 @@ const escape = (s: string) =>
   );
 
 /** The built-in logo as SVG markup in one colour (black for receipts). */
-export function marinaLogoSvg(color = '#000', width?: number, height?: number) {
+export function builtInLogoSvg(color = '#000', width?: number, height?: number) {
   const size = width && height ? ` width="${width}" height="${height}"` : '';
-  const paths = [...MARINA_LETTERS, MARINA_CELLULAR].map((d) => `<path d="${d}"/>`).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${MARINA_VIEWBOX}"${size} fill="${color}">${paths}</svg>`;
+  const paths = [...LOGO_MARK, ...LOGO_WORDMARK].map((d) => `<path d="${d}"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${LOGO_VIEWBOX}"${size} fill="${color}" fill-rule="evenodd">${paths}</svg>`;
 }
 
 /** A QR code as SVG markup (UTF-8, error correction M). */
@@ -28,7 +28,7 @@ export function qrSvg(value: string, cell = 3) {
 export function blockHtml(b: ReceiptBlock, logo: string | null): string {
   switch (b.type) {
     case 'logo':
-      return `<div class="logo">${logo ? `<img src="${logo}" alt="">` : marinaLogoSvg()}</div>`;
+      return `<div class="logo">${logo ? `<img src="${logo}" alt="">` : builtInLogoSvg()}</div>`;
     case 'divider':
       return `<div class="hr${b.char === '=' ? ' double' : ''}"></div>`;
     case 'feed':

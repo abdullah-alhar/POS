@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, warrantyEnd, warrantyLabel, type ReceiptDoc } from '@marina/shared';
+import { DEFAULT_SETTINGS, warrantyEnd, warrantyLabel, type ReceiptDoc } from '@shoppos/shared';
 import { encodeReceipt, renderText } from '../src/modules/printing/escpos';
 import { buildSaleReceipt, sampleSale } from '../src/modules/printing/receipt-builder';
 import { SettingsService } from '../src/modules/settings/settings.service';

@@ -10,7 +10,7 @@ import {
   type ProductQuery,
   type VariantDto,
   type VariantPricesInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { badRequest, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { nextCounter } from '../../prisma/counters';

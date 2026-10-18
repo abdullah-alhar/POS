@@ -13,7 +13,7 @@ import type {
   BackupStatusDto,
   DriveConnectInput,
   RestoreBackupInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { runMigrations } from '../../cli/migrate';
 import { AppException, badRequest, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';

@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import type { ApiErrorBody, ApprovalAction, ErrorCode } from '@marina/shared';
+import type { ApiErrorBody, ApprovalAction, ErrorCode } from '@shoppos/shared';
 
 /** Every error we throw on purpose. The filter turns it into an ApiErrorBody. */
 export class AppException extends HttpException {

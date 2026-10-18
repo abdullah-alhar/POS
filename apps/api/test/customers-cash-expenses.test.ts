@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_CASHIER_PERMISSIONS } from '@marina/shared';
+import { DEFAULT_CASHIER_PERMISSIONS } from '@shoppos/shared';
 import { resetDb, standardUsers, startApp, type TestContext } from './helpers';
 
 let ctx: TestContext;

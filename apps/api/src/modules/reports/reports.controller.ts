@@ -6,7 +6,7 @@ import {
   type ProductReportQuery,
   type ReportRange,
   type SalesReportQuery,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { ReportsService } from './reports.service';

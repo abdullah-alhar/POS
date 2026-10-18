@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router';
-import { warrantyLabel, type PosIndexItem } from '@marina/shared';
+import { warrantyLabel, type PosIndexItem } from '@shoppos/shared';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -361,7 +361,7 @@ function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void
             <Keyboard className="size-5" /> Keyboard shortcuts
           </DialogTitle>
           <DialogDescription>
-            Everything in Marina POS can be done from the keyboard.
+            Everything in ShopPOS can be done from the keyboard.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[65vh] gap-6 overflow-y-auto md:columns-2">

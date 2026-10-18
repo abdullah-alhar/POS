@@ -6,7 +6,7 @@ import {
   type ExpenseInput,
   type ExpenseQuery,
   type Page,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { AppException, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { nextDocumentNumber } from '../../prisma/counters';

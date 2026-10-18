@@ -9,7 +9,7 @@ import {
   type ReturnInput,
   type ReturnQuery,
   type SaleReturnDto,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { AppException, badRequest, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { nextDocumentNumber } from '../../prisma/counters';

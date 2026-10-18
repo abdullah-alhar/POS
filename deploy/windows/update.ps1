@@ -1,10 +1,10 @@
 <#
-  Marina POS - updates an installed Marina POS to the version in this folder.
+  ShopPOS - updates an installed ShopPOS to the version in this folder.
 
   What it does:
-    1. Checks Marina POS is installed (C:\MarinaPOS) and the database is running
-    2. Makes a backup of all data (C:\MarinaPOS\backups\...before-update.dump)
-    3. Stops the POS server and keeps the current version as C:\MarinaPOS\app.prev
+    1. Checks ShopPOS is installed (C:\ShopPOS) and the database is running
+    2. Makes a backup of all data (C:\ShopPOS\backups\...before-update.dump)
+    3. Stops the POS server and keeps the current version as C:\ShopPOS\app.prev
     4. Copies the new version, updates the database and starts the server again
     5. Checks the new version answers. If anything goes wrong, the old version and the data
        from step 2 are put back automatically.
@@ -14,7 +14,7 @@
 #>
 [CmdletBinding()]
 param(
-  [string]$Root = 'C:\MarinaPOS'
+  [string]$Root = 'C:\ShopPOS'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -78,17 +78,17 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
   exit 1
 }
 
-$envFile = Join-Path $Root 'config\marina-pos.env'
+$envFile = Join-Path $Root 'config\shoppos.env'
 $nodeExe = Join-Path $Root 'node\node.exe'
 if (-not ((Test-Path $envFile) -and (Test-Path $nodeExe) -and (Test-Path (Join-Path $Root 'app')))) {
-  Write-Host "Marina POS is not installed in $Root. Run INSTALL.cmd instead." -ForegroundColor Red
+  Write-Host "ShopPOS is not installed in $Root. Run INSTALL.cmd instead." -ForegroundColor Red
   exit 1
 }
 New-Item -ItemType Directory -Force -Path (Join-Path $Root 'logs'), (Join-Path $Root 'backups') | Out-Null
 try { Start-Transcript -Path (Join-Path $Root 'logs\update.log') -Append | Out-Null } catch { }
 
 $newVersion = (Get-Content (Join-Path $Here 'VERSION') -ErrorAction SilentlyContinue | Select-Object -First 1)
-if (-not $newVersion) { Fail 'This folder does not contain a Marina POS release (VERSION file missing).' }
+if (-not $newVersion) { Fail 'This folder does not contain a ShopPOS release (VERSION file missing).' }
 $newVersion = $newVersion.Trim()
 
 $healthUrl = 'https://127.0.0.1/api/health'
@@ -106,7 +106,7 @@ if ($extra.Count) { Add-Content -Path $envFile -Value $extra -Encoding ascii }
 $env:DOTENV_CONFIG_PATH = $envFile
 
 Step 'Checking the installed version'
-try { Start-Service MarinaPOS-DB } catch { Fail "The database service did not start: $($_.Exception.Message)" }
+try { Start-Service ShopPOS-DB } catch { Fail "The database service did not start: $($_.Exception.Message)" }
 $before = Get-Health
 $oldVersion = if ($before) { $before.version } else { 'unknown (the POS server is not answering)' }
 Info "Installed: $oldVersion"
@@ -122,9 +122,9 @@ Ok "Backup: $backupFile"
 
 Step 'Installing the new version'
 Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction SilentlyContinue |
-  Where-Object { $_.CommandLine -like '*MarinaPOS\chrome*' } |
+  Where-Object { $_.CommandLine -like '*ShopPOS\chrome*' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-try { Stop-Service MarinaPOS -Force } catch { Warn "Stopping the POS server: $($_.Exception.Message)" }
+try { Stop-Service ShopPOS -Force } catch { Warn "Stopping the POS server: $($_.Exception.Message)" }
 Start-Sleep -Seconds 2
 
 $app = Join-Path $Root 'app'
@@ -148,8 +148,8 @@ if (-not $failure) {
   } finally { Pop-Location }
 }
 if (-not $failure) {
-  Step 'Starting Marina POS'
-  try { Start-Service MarinaPOS } catch { $failure = "The POS server did not start: $($_.Exception.Message)" }
+  Step 'Starting ShopPOS'
+  try { Start-Service ShopPOS } catch { $failure = "The POS server did not start: $($_.Exception.Message)" }
 }
 if (-not $failure) {
   $after = Wait-Healthy 90
@@ -160,19 +160,19 @@ if (-not $failure) {
 if ($failure) {
   Write-Host ''
   Write-Host "PROBLEM: $failure Putting the previous version back..." -ForegroundColor Yellow
-  try { Stop-Service MarinaPOS -Force } catch { }
+  try { Stop-Service ShopPOS -Force } catch { }
   Start-Sleep -Seconds 2
   $restore = Invoke-Node @((Join-Path $Here 'app\api\dist\cli\backup.js'), 'restore', $backupFile)
   if ($restore.Code -ne 0) { Warn "Putting the data back failed. The backup is safe in $backupFile; ask for help before selling." }
   if (Test-Path $app) { Remove-Item $app -Recurse -Force -ErrorAction SilentlyContinue }
   Move-Item $prev $app
-  try { Start-Service MarinaPOS } catch { }
+  try { Start-Service ShopPOS } catch { }
   if (Wait-Healthy 90) { Ok 'The previous version is running again with the data as it was before the update.' }
   else { Warn "The previous version did not start. See $Root\logs." }
   Fail "The update to $newVersion did not work. $failure"
 }
 
-Ok "Marina POS $newVersion is running"
+Ok "ShopPOS $newVersion is running"
 $startScript = Join-Path $Root 'start-pos.ps1'
 if (Test-Path $kioskFile) {
   Start-Process powershell -ArgumentList "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$startScript`"" | Out-Null

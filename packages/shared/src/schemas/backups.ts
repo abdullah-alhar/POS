@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const restoreBackupSchema = z.object({
   /** File name from the backup list. */
-  fileName: z.string().regex(/^marina-pos_[\w-]+\.dump$/, 'Choose a backup file'),
+  fileName: z.string().regex(/^shoppos_[\w-]+\.dump$/, 'Choose a backup file'),
   /** Where the file is: the backup folder on this computer, or the USB folder. */
   source: z.enum(['local', 'usb']).default('local'),
   /** The user types RESTORE to confirm. */

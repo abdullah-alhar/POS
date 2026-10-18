@@ -22,15 +22,15 @@ const KIND_SUFFIX: Record<BackupKind, string> = {
   PRE_UPDATE: 'before-update',
 };
 
-/** marina-pos_2026-10-14_2130_auto.dump (local time, sorts by date). */
+/** shoppos_2026-10-14_2130_auto.dump (local time, sorts by date). */
 export function backupFileName(kind: BackupKind, now = new Date()) {
   const p = (v: number) => String(v).padStart(2, '0');
   const stamp = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
-  return `marina-pos_${stamp}_${KIND_SUFFIX[kind]}.dump`;
+  return `shoppos_${stamp}_${KIND_SUFFIX[kind]}.dump`;
 }
 
 export const BACKUP_FILE_RE =
-  /^marina-pos_(\d{4}-\d{2}-\d{2})_(\d{4,6})_(auto|manual|before-restore|before-update)\.dump$/;
+  /^shoppos_(\d{4}-\d{2}-\d{2})_(\d{4,6})_(auto|manual|before-restore|before-update)\.dump$/;
 
 export function parseBackupFileName(name: string): { kind: BackupKind; date: Date } | null {
   const m = BACKUP_FILE_RE.exec(name);
@@ -174,10 +174,10 @@ export async function verifyBackup(databaseUrl: string, file: string): Promise<v
   const out = await run('pg_restore', parseDatabaseUrl(databaseUrl), ['--list'], {
     input: file,
   }).catch((err: Error) => {
-    throw new Error(`This is not a Marina POS backup file (${err.message})`);
+    throw new Error(`This is not a ShopPOS backup file (${err.message})`);
   });
   if (!/TABLE DATA public "?Sale"?/.test(out))
-    throw new Error('This backup does not contain Marina POS data');
+    throw new Error('This backup does not contain ShopPOS data');
 }
 
 /** Drops the app's tables, types, functions and extensions (works without owning the schema). */

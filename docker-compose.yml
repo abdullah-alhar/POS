@@ -1,16 +1,17 @@
 # Development database only. The shop laptop runs PostgreSQL as a Windows service.
+name: shoppos
 services:
   db:
     image: postgres:17-alpine
-    container_name: marina-pos-db
+    container_name: shoppos-db
     environment:
       POSTGRES_USER: pos
       POSTGRES_PASSWORD: pos
-      POSTGRES_DB: marina_pos
+      POSTGRES_DB: shoppos
     ports:
       - '5432:5432'
     volumes:
-      - marina-pos-db:/var/lib/postgresql/data
+      - shoppos-db:/var/lib/postgresql/data
       - ./scripts/dev-db-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 volumes:
-  marina-pos-db:
+  shoppos-db:

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { APPROVAL_ACTIONS, type ApprovalAction, type ApprovalResult } from '@marina/shared';
+import { APPROVAL_ACTIONS, type ApprovalAction, type ApprovalResult } from '@shoppos/shared';
 import { PinPad } from '@/components/pin-pad';
 import {
   Dialog,

@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { PrinterMode, PrintResult, ReceiptDoc } from '@marina/shared';
+import type { PrinterMode, PrintResult, ReceiptDoc } from '@shoppos/shared';
 import { api, ApiError } from '@/lib/api';
 import { receiptHtml } from './receipt-html';
 

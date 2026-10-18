@@ -10,7 +10,7 @@ import type {
   SalesReport,
   SalesReportRow,
   StockValueReport,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { variantLabel } from '../catalog/products.service';

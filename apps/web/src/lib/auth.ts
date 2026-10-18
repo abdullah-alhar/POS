@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { hasPermission, type AuthUser, type Permission } from '@marina/shared';
+import { hasPermission, type AuthUser, type Permission } from '@shoppos/shared';
 import { api, ApiError } from './api';
 import { keys } from './queries';
 

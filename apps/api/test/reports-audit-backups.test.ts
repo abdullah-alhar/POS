@@ -12,7 +12,7 @@ import {
 } from '../src/modules/reports/reports.service';
 import { resetDb, standardUsers, startApp, type TestContext } from './helpers';
 
-const backupDir = mkdtempSync(path.join(tmpdir(), 'marina-backups-'));
+const backupDir = mkdtempSync(path.join(tmpdir(), 'shoppos-backups-'));
 process.env.BACKUP_DIR = backupDir;
 
 let ctx: TestContext;
@@ -171,7 +171,7 @@ describe('backup file names', () => {
   it('round-trips the kind and time', () => {
     const at = new Date(2026, 9, 14, 21, 30, 5);
     const name = backupFileName('PRE_UPDATE', at);
-    expect(name).toBe('marina-pos_2026-10-14_213005_before-update.dump');
+    expect(name).toBe('shoppos_2026-10-14_213005_before-update.dump');
     expect(parseBackupFileName(name)).toEqual({ kind: 'PRE_UPDATE', date: at });
     expect(parseBackupFileName('../etc/passwd')).toBeNull();
   });

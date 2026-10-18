@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { calculateCart, CartCalcError, type CartTotals } from '@marina/shared';
+import { calculateCart, CartCalcError, type CartTotals } from '@shoppos/shared';
 import { usePublicSettings } from '@/lib/queries';
 import { unitPriceOf, useCart } from '@/stores/cart';
 

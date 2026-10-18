@@ -13,7 +13,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import forge from 'node-forge';
 
-export const CA_NAME = 'Marina POS Local CA';
+export const CA_NAME = 'ShopPOS Local CA';
 const DAY = 86_400_000;
 /** Server certificates last 825 days (the most macOS/iOS accept; harmless for Windows). */
 const SERVER_DAYS = 825;
@@ -70,7 +70,7 @@ function createCa(files: TlsFiles) {
   cert.validity.notAfter = new Date(Date.now() + 20 * 365 * DAY);
   const name = [
     { name: 'commonName', value: CA_NAME },
-    { name: 'organizationName', value: 'Marina POS' },
+    { name: 'organizationName', value: 'ShopPOS' },
   ];
   cert.setSubject(name);
   cert.setIssuer(name);

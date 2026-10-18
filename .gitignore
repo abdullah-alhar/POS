@@ -1,19 +1,29 @@
+# Dependencies and build output
 node_modules
 dist
 coverage
+release
+apps/api/src/generated
+
+# Local config and secrets
 .env
 .env.*
 !.env.example
-apps/api/src/generated
-apps/api/storage
-release
+
+# Runtime data (backups, print jobs) from development and tests
+apps/api/storage*
+
+# Logs, OS and editor files
 *.log
 .DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
 
 # Design source files are large; keep them out of git (the app uses the vector paths in code).
 assets/**/*.ai
 assets/**/*.psd
-apps/api/storage*
 
 # Local temporary files (tests, tools)
 .scratch

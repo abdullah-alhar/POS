@@ -7,7 +7,7 @@ import {
   type CloseDayInput,
   type OpenCashSessionInput,
   type Page,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { AppException, badRequest, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService, type Tx } from '../../prisma/prisma.service';

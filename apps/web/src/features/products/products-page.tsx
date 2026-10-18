@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Package, Plus, Search, Upload } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import type { Page, ProductListItem } from '@marina/shared';
+import type { Page, ProductListItem } from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';

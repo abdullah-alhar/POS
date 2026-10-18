@@ -1,5 +1,5 @@
 import { Controller, Get, Module, Query } from '@nestjs/common';
-import { auditQuerySchema, type AuditEntryDto, type AuditQuery, type Page } from '@marina/shared';
+import { auditQuerySchema, type AuditEntryDto, type AuditQuery, type Page } from '@shoppos/shared';
 import { RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import type { Prisma } from '../../generated/prisma/client';

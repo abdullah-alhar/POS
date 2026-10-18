@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { bpToPercentText, parsePercent, type Discount } from '@marina/shared';
+import { bpToPercentText, parsePercent, type Discount } from '@shoppos/shared';
 import { MoneyInput } from '@/components/money-input';
 import { Input } from '@/components/ui/input';
 import { usePublicSettings } from '@/lib/queries';

@@ -9,7 +9,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src'),
       // Use the shared package's source directly: instant reloads, no separate build step.
-      '@marina/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
+      '@shoppos/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
   server: {

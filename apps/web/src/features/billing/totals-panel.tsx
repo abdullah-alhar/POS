@@ -12,7 +12,7 @@ import {
   type CartTotals,
   type CashSessionDto,
   type CheckoutResult,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { Button } from '@/components/ui/button';
 import { useMoney } from '@/lib/queries';
 import { cn } from '@/lib/utils';

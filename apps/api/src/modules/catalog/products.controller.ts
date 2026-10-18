@@ -20,7 +20,7 @@ import {
   type ProductInputParsed,
   type ProductQuery,
   type VariantPricesInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { z } from 'zod';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';

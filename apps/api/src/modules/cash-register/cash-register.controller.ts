@@ -17,7 +17,7 @@ import {
   type CashMovementInput,
   type CloseDayInput,
   type OpenCashSessionInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { CashRegisterService } from './cash-register.service';

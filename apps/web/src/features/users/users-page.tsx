@@ -20,7 +20,7 @@ import {
   type Permission,
   type Role,
   type UserDto,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { FormField } from '@/components/form-field';
 import { PageHeader } from '@/components/page-header';

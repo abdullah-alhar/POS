@@ -7,7 +7,7 @@ import {
   quoteSchema,
   type ReceiptDoc,
   type ReceiptSettings,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { AppException } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { config } from '../../config';

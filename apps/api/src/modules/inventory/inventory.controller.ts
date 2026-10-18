@@ -5,7 +5,7 @@ import {
   stockAdjustmentSchema,
   type MovementQuery,
   type StockAdjustmentInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { InventoryService } from './inventory.service';

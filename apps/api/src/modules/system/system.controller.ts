@@ -1,5 +1,5 @@
 import { Controller, Get, HttpCode, HttpStatus, Logger, Module, Post } from '@nestjs/common';
-import { isAdminRole } from '@marina/shared';
+import { isAdminRole } from '@shoppos/shared';
 import { AppException } from '../../common/app-exception';
 import { CurrentActor, Public, type Actor } from '../../common/decorators';
 import { runPowerShell } from '../../common/powershell';
@@ -10,11 +10,11 @@ import { ApprovalsService } from '../auth/approvals.service';
 
 /**
  * Closes the kiosk browser window. Only browser processes started with the POS's own profile
- * folder (…\MarinaPOS\chrome) are stopped, so other Chrome/Edge windows are left alone.
+ * folder (…\ShopPOS\chrome) are stopped, so other Chrome/Edge windows are left alone.
  */
 const CLOSE_KIOSK_SCRIPT = `
 Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" |
-  Where-Object { $_.CommandLine -like '*MarinaPOS\\chrome*' } |
+  Where-Object { $_.CommandLine -like '*ShopPOS\\chrome*' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 `;
 

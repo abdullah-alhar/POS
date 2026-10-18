@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
-import type { Page, PosIndexItem, PurchaseDto, PurchaseListItem } from '@marina/shared';
+import type { Page, PosIndexItem, PurchaseDto, PurchaseListItem } from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { FormField } from '@/components/form-field';

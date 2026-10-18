@@ -6,7 +6,7 @@ import {
   summarizePayments,
   type PaymentEntry,
   type PaymentMethod,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { MoneyInput } from '@/components/money-input';
 import { Button } from '@/components/ui/button';
 import {

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, FileSpreadsheet, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { IMPORT_COLUMNS, type ImportResult, type ImportRow } from '@marina/shared';
+import { IMPORT_COLUMNS, type ImportResult, type ImportRow } from '@shoppos/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -154,7 +154,7 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   function template() {
     downloadText(
-      'marina-pos-products.csv',
+      'shoppos-products.csv',
       toCsv([
         [
           'Name',

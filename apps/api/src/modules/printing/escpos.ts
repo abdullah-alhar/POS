@@ -1,4 +1,4 @@
-import type { PrinterLogo, ReceiptAlign, ReceiptDoc } from '@marina/shared';
+import type { PrinterLogo, ReceiptAlign, ReceiptDoc } from '@shoppos/shared';
 
 /**
  * Turns receipt blocks into ESC/POS bytes for 58/80 mm thermal printers.

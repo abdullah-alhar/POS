@@ -7,7 +7,7 @@ import type {
   LoginTile,
   PinLoginInput,
   UpdateAvatarInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { forbidden, unauthorized } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';

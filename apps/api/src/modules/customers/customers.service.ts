@@ -10,7 +10,7 @@ import {
   type CustomerQuery,
   type Page,
   type SaleListItem,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { AppException, badRequest, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';

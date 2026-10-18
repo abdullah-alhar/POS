@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Response } from 'express';
-import { effectivePermissions } from '@marina/shared';
+import { effectivePermissions } from '@shoppos/shared';
 import { config } from '../../config';
 import type { User } from '../../generated/prisma/client';
 import { SESSION_COOKIE, SESSION_HOURS, type RequestUser, type SessionPayload } from './auth.types';

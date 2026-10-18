@@ -1,7 +1,12 @@
-# Marina POS
+<p align="center">
+  <img src="assets/brand/logo.svg" alt="ShopPOS" width="320">
+</p>
 
-Offline point-of-sale system for a phone accessories shop (retail + wholesale), built to run on a
-single Windows laptop. One program serves both the API and the web app; the owner only opens Chrome.
+# ShopPOS
+
+Offline point-of-sale system for small retail and wholesale shops, built to run on a single Windows
+laptop. One program serves both the API and the web app; the shop only opens Chrome. The shop name,
+logo and colour are set in **Settings → Branding**.
 
 | Part              | Tech                                                                                         |
 | ----------------- | -------------------------------------------------------------------------------------------- |
@@ -9,20 +14,20 @@ single Windows laptop. One program serves both the API and the web app; the owne
 | `apps/api`        | NestJS 11, Prisma 7, PostgreSQL 17, JWT in httpOnly cookies                                  |
 | `packages/shared` | Money maths, bill calculation, permissions and Zod schemas used by both sides                |
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design and the decisions agreed with the shop.
+## Features
 
-## Build status
+- Keyboard-first billing (F12 lists every key), barcode scanning, held bills, quotations, price check
+- Retail and wholesale prices, line and bill discounts, admin approval for protected actions
+- Stock, purchases, suppliers, returns, CSV/Excel product import, barcode label sheets
+- Warranty and IMEI/serial tracking
+- Customers with credit, cash register (open/close day), expenses
+- Reports, dashboard, audit log
+- Drag-and-drop receipt editor, ESC/POS thermal printing with browser fallback
+- Backups to a local folder, USB stick and Google Drive
+- Windows installer with self-rolling-back updates, HTTPS and kiosk mode
 
-| Phase | Scope                                                             | Status |
-| ----- | ----------------------------------------------------------------- | ------ |
-| 1     | Setup, database, auth, products                                   | Done   |
-| 2     | Billing screen, payments, receipts (+ quick Windows test build)   | Done   |
-| 3     | Stock, purchases, suppliers, returns, product import              | Done   |
-| 4     | Customers, credit, cash register, expenses                        | Done   |
-| 5     | Reports, dashboard, audit log, backups (local, USB, Google Drive) | Done   |
-| 6     | Windows installer, updates, owner guide                           | Done   |
-
-Version **1.0.0**: keyboard-first billing (F12 lists every key), warranty and IMEI tracking, a drag-and-drop receipt editor, quotations, price check, screen lock, and a simple 9-entry menu. The shop owner's manual is [docs/OWNER-GUIDE.md](docs/OWNER-GUIDE.md).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design and
+[docs/OWNER-GUIDE.md](docs/OWNER-GUIDE.md) for the shop owner's manual.
 
 ## Development setup (macOS, Linux or Windows)
 
@@ -32,7 +37,7 @@ Needs **Node.js 22.12+**, **pnpm 10** and **Docker** (only for the development d
 corepack enable pnpm          # or: npm i -g pnpm@10
 pnpm install                  # also generates the Prisma client
 cp apps/api/.env.example apps/api/.env
-pnpm db:up                    # PostgreSQL 17 in Docker (creates marina_pos and marina_pos_test)
+pnpm db:up                    # PostgreSQL 17 in Docker (creates shoppos and shoppos_test)
 pnpm db:migrate               # create the tables
 pnpm db:seed                  # Super Admin + Admin, 62 sample products (143 variants)
 pnpm dev                      # API on :3000, web app on http://localhost:5180
@@ -63,29 +68,31 @@ For a real shop, seed only the accounts and tax rates: `SEED_MODE=minimal pnpm d
 | `pnpm start`      | Run the production build: one app on `PORT` serving API + UI     |
 | `pnpm db:migrate` | Create a new migration after editing `schema.prisma`             |
 
-Integration tests use the separate `marina_pos_test` database and empty it between tests, so they
+Integration tests use the separate `shoppos_test` database and empty it between tests, so they
 never touch your development data.
 
 ## Project layout
 
 ```
-apps/api/prisma/        schema.prisma, migrations, seed.ts
+apps/api/prisma/        schema.prisma, migrations
 apps/api/src/modules/   auth, users, settings, audit, catalog, sales, printing, inventory, suppliers,
                         purchases, returns, customers, cash-register, expenses, reports, backups, system
 apps/api/src/cli/       migrate, seed, tls (HTTPS certificate), backup (used by update.ps1)
 apps/api/test/          integration tests
-apps/web/src/features/  billing, sales, returns, customers, cash, expenses, products, stock, purchases,
-                        labels, dashboard, reports, audit, backups, users, settings, account
-apps/web/src/components ui (shadcn) + shared app components (PIN pad, money input, approval dialog)
+apps/web/src/features/  billing, sales, returns, customers, cash, expenses, products, catalog, inventory,
+                        purchases, labels, receipts, dashboard, reports, audit, backups, users, settings
+apps/web/src/components ui (shadcn), brand (logo, startup animation) + shared app components
 packages/shared/src/    money.ts, cart-calc.ts, barcode.ts, permissions.ts, schemas/
-deploy/windows/         install and update scripts (Phase 6)
-docs/                   architecture notes and the owner guide
+deploy/windows/         install, update and uninstall scripts
+scripts/                release build, dev database init
+assets/brand/           logo source files (SVG)
+docs/                   architecture notes, Windows test guide, owner guide
 ```
 
 ## Deployment (Windows)
 
 ```bash
-pnpm release:win             # → release/marina-pos-<version>/ and .zip (~12 MB)
+pnpm release:win             # → release/shoppos-<version>/ and .zip (~12 MB)
 pnpm release:win --offline   # also bundles Node.js, PostgreSQL and WinSW (~420 MB, no internet needed)
 ```
 
@@ -102,8 +109,8 @@ every start. Step-by-step guide: [docs/WINDOWS-TEST.md](docs/WINDOWS-TEST.md).
 
 ### Backups
 
-`pg_dump` backups (custom format) go to `C:\MarinaPOS\backups`: daily at the set time (21:30 by
+`pg_dump` backups (custom format) go to `C:\ShopPOS\backups`: daily at the set time (21:30 by
 default), when the day is closed, before every restore and before every update. The newest is copied
 to a USB folder whenever the stick is plugged in, and optionally uploaded to the owner's Google Drive
 (their own OAuth "Desktop app" client, `drive.file` scope, loopback sign-in). In development the tools
-run inside the Docker container (`PG_DOCKER_CONTAINER=marina-pos-db` in `apps/api/.env`).
+run inside the Docker container (`PG_DOCKER_CONTAINER=shoppos-db` in `apps/api/.env`).

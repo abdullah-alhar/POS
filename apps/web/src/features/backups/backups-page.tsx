@@ -14,7 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { BackupDto, BackupSettings, BackupStatusDto } from '@marina/shared';
+import type { BackupDto, BackupSettings, BackupStatusDto } from '@shoppos/shared';
 import { FormField } from '@/components/form-field';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -377,12 +377,12 @@ function BackupSettingsForm({ initial }: { initial: BackupSettings }) {
           </label>
           <FormField
             label="USB folder"
-            hint="e.g. E:\MarinaBackups. The newest backup is copied there whenever the USB drive is plugged in."
+            hint="e.g. E:\ShopPOSBackups. The newest backup is copied there whenever the USB drive is plugged in."
           >
             <Input
               value={form.usbPath}
               onChange={(e) => set('usbPath', e.target.value)}
-              placeholder="E:\MarinaBackups"
+              placeholder="E:\ShopPOSBackups"
             />
           </FormField>
           <label className="flex items-center gap-2 text-sm">
@@ -448,8 +448,8 @@ function DriveCard({ status }: { status?: BackupStatusDto }) {
           <Cloud className="size-4" /> Google Drive (optional)
         </CardTitle>
         <CardDescription>
-          An extra copy in your own Google Drive, in a folder called &ldquo;Marina POS
-          Backups&rdquo;. The shop keeps working without internet; uploads happen when it is online.
+          An extra copy in your own Google Drive, in a folder called &ldquo;ShopPOS Backups&rdquo;.
+          The shop keeps working without internet; uploads happen when it is online.
         </CardDescription>
       </CardHeader>
       <CardContent>

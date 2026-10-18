@@ -1,4 +1,4 @@
-import { formatMoney } from '@marina/shared';
+import { formatMoney } from '@shoppos/shared';
 import { downloadBlob } from '@/lib/csv';
 
 export interface ExportColumn<T> {
@@ -23,7 +23,7 @@ export interface ExportTable<T> {
 export async function exportExcel<T>(t: ExportTable<T>, shopName: string) {
   const { default: ExcelJS } = await import('exceljs');
   const book = new ExcelJS.Workbook();
-  book.creator = 'Marina POS';
+  book.creator = 'ShopPOS';
   const sheet = book.addWorksheet(t.title.slice(0, 31));
   sheet.addRow([`${shopName} – ${t.title}`]).font = { bold: true, size: 14 };
   sheet.addRow([t.subtitle]).font = { color: { argb: 'FF666666' } };

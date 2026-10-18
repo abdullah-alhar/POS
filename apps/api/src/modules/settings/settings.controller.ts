@@ -5,7 +5,7 @@ import {
   SETTINGS_SCHEMAS,
   SETTINGS_SECTIONS,
   type SettingsSection,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { badRequest, forbidden } from '../../common/app-exception';
 import { CurrentActor, Public, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';

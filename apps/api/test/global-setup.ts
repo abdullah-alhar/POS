@@ -7,7 +7,7 @@ export default function setup() {
     env: {
       ...process.env,
       DATABASE_URL:
-        process.env.TEST_DATABASE_URL ?? 'postgresql://pos:pos@localhost:5432/marina_pos_test',
+        process.env.TEST_DATABASE_URL ?? 'postgresql://pos:pos@localhost:5432/shoppos_test',
     },
   });
 }

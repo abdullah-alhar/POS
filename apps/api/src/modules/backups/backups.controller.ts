@@ -13,7 +13,7 @@ import {
   restoreBackupSchema,
   type DriveConnectInput,
   type RestoreBackupInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { CashRegisterModule } from '../cash-register/cash-register.controller';

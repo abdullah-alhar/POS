@@ -13,7 +13,7 @@ import {
   type LoginInput,
   type PinLoginInput,
   type UpdateAvatarInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, Public, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { ApprovalsService } from './approvals.service';

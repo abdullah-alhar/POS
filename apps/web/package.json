@@ -1,5 +1,5 @@
 {
-  "name": "@marina/web",
+  "name": "@shoppos/web",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@marina/shared": "workspace:*",
+    "@shoppos/shared": "workspace:*",
     "@tanstack/react-query": "^5.90.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

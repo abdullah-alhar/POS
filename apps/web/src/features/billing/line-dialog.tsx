@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Minus, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { calculateCart, type Discount } from '@marina/shared';
+import { calculateCart, type Discount } from '@shoppos/shared';
 import { FormField } from '@/components/form-field';
 import { MoneyInput } from '@/components/money-input';
 import { Button } from '@/components/ui/button';

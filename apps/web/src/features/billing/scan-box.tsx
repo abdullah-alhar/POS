@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { ScanBarcode } from 'lucide-react';
-import type { PosIndexItem, PriceMode } from '@marina/shared';
+import type { PosIndexItem, PriceMode } from '@shoppos/shared';
 import { Badge } from '@/components/ui/badge';
 import { useMoney } from '@/lib/queries';
 import { cn } from '@/lib/utils';

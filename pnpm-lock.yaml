@@ -38,7 +38,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@marina/shared':
+      '@shoppos/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@nestjs/common':
@@ -135,7 +135,7 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv@8.20.0)(effect@3.20.0)(react-hook-form@7.90.0(@types/react@19.3.0)(react@19.3.0))(valibot@1.4.2(typescript@5.9.3))(zod@4.6.7)
-      '@marina/shared':
+      '@shoppos/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@tanstack/react-query':

@@ -8,7 +8,7 @@ import {
   type PurchaseInput,
   type PurchaseListItem,
   type PurchaseQuery,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { badRequest, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { nextDocumentNumber } from '../../prisma/counters';

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Discount } from '@marina/shared';
+import type { Discount } from '@shoppos/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

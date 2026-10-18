@@ -7,7 +7,7 @@ import {
   type ExceptionFilter,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import type { ApiErrorBody, ErrorCode } from '@marina/shared';
+import type { ApiErrorBody, ErrorCode } from '@shoppos/shared';
 import { Prisma } from '../generated/prisma/client';
 
 const STATUS_CODES: Partial<Record<number, ErrorCode>> = {

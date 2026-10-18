@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { Discount, HeldCart, PosIndexItem, PriceMode } from '@marina/shared';
+import type { Discount, HeldCart, PosIndexItem, PriceMode } from '@shoppos/shared';
 import { uuid } from '@/lib/uuid';
 
 /**

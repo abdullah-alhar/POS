@@ -1,4 +1,4 @@
-import type { AuthUser } from '@marina/shared';
+import type { AuthUser } from '@shoppos/shared';
 
 export const SESSION_COOKIE = 'pos_session';
 export const SESSION_HOURS = 12;

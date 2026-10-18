@@ -17,7 +17,7 @@ import {
   type PrintSaleInput,
   type QuoteInput,
   type ReceiptSettings,
-} from '@marina/shared';
+} from '@shoppos/shared';
 
 const receiptPreviewSchema = z.object({
   receipt: receiptSettingsSchema,

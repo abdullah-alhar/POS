@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { normalizeBarcode, type PosIndex, type PosIndexItem } from '@marina/shared';
+import { normalizeBarcode, type PosIndex, type PosIndexItem } from '@shoppos/shared';
 import { api } from '@/lib/api';
 import { keys } from '@/lib/queries';
 

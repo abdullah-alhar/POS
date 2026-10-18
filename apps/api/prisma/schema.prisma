@@ -1,4 +1,4 @@
-// Marina POS database schema.
+// ShopPOS database schema.
 // Money is always an Int number of cents. Percentages are Int basis points (1000 = 10%).
 // Bills, payments, stock movements and the audit log are never deleted (enforced by triggers).
 

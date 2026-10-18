@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Sunrise } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CashSessionDto } from '@marina/shared';
+import type { CashSessionDto } from '@shoppos/shared';
 import { MoneyInput } from '@/components/money-input';
 import { Button } from '@/components/ui/button';
 import {

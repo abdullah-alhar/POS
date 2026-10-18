@@ -10,8 +10,8 @@ import {
   type AllSettings,
   type BrandingSettings,
   receiptHasLogo,
-} from '@marina/shared';
-import { MARINA_CELLULAR, MARINA_LETTERS, MARINA_VIEWBOX } from '@/components/brand/marina-paths';
+} from '@shoppos/shared';
+import { LOGO_MARK, LOGO_VIEWBOX, LOGO_WORDMARK } from '@/components/brand/logo-paths';
 import { replaySplash } from '@/components/brand/brand-splash';
 import { FormField } from '@/components/form-field';
 import { Badge } from '@/components/ui/badge';
@@ -246,11 +246,10 @@ export function BrandingForm({ settings }: { settings: AllSettings }) {
 function PreviewLogo({ logo, className }: { logo: string | null; className?: string }) {
   if (logo) return <img src={logo} alt="" className={cn('object-contain', className)} />;
   return (
-    <svg viewBox={MARINA_VIEWBOX} fill="currentColor" className={className}>
-      {MARINA_LETTERS.map((d, i) => (
+    <svg viewBox={LOGO_VIEWBOX} fill="currentColor" fillRule="evenodd" className={className}>
+      {[...LOGO_MARK, ...LOGO_WORDMARK].map((d, i) => (
         <path key={i} d={d} />
       ))}
-      <path d={MARINA_CELLULAR} />
     </svg>
   );
 }
@@ -382,7 +381,7 @@ function LogoPicker({
           </Button>
           {value && (
             <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>
-              <RotateCcw /> Use Marina Cellular logo
+              <RotateCcw /> Use the built-in logo
             </Button>
           )}
         </div>

@@ -13,7 +13,7 @@ import {
   type SalesReportRow,
   type StockValueReport,
   type StockValueRow,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -138,7 +138,7 @@ function ExportButtons<T>({ table }: { table: ExportTable<T> | null }) {
     if (!table) return;
     setBusy(kind);
     try {
-      const shop = settings?.shop.name ?? 'Marina POS';
+      const shop = settings?.shop.name ?? 'ShopPOS';
       if (kind === 'xlsx') await exportExcel(table, shop);
       else await exportPdf(table, shop, settings?.pos.currencySymbol ?? 'Rs');
     } catch (err) {

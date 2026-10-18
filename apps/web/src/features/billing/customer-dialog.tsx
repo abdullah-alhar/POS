@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Loader2, Plus, Search, UserPlus } from 'lucide-react';
-import type { CustomerDto, Page } from '@marina/shared';
+import type { CustomerDto, Page } from '@shoppos/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {

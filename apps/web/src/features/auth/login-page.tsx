@@ -10,7 +10,7 @@ import {
   type AuthUser,
   type LoginInput,
   type LoginTile,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { FormField } from '@/components/form-field';
 import { PinPad } from '@/components/pin-pad';

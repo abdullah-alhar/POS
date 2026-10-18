@@ -25,7 +25,7 @@ import {
   type Dashboard,
   type DashboardDay,
   type PaymentMethod,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

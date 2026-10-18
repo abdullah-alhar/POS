@@ -1,4 +1,4 @@
-# Marina POS: install and test on the Windows laptop
+# ShopPOS: install and test on the Windows laptop
 
 Version 1.0.0 is the complete POS: billing, stock, purchases, returns, customers and credit,
 cash register, expenses, dashboard, reports, backups and the audit log.
@@ -9,7 +9,7 @@ There are three ways to start:
 | ---------------------------------------------------- | ------------------ | ----------------------------------------------------- |
 | **Try it** with ~60 sample products                  | `INSTALL-TEST.cmd` | test passwords (below)                                |
 | **Set up the real shop** (empty, your own passwords) | `INSTALL.cmd`      | asks for the owner and Super Admin passwords and PINs |
-| **Update** a laptop that already has Marina POS      | `UPDATE.cmd`       | everything is kept; a backup is made first            |
+| **Update** a laptop that already has ShopPOS         | `UPDATE.cmd`       | everything is kept; a backup is made first            |
 
 A laptop that already has an older version (0.2–0.4): use **UPDATE.cmd**. Your test sales stay.
 
@@ -24,10 +24,10 @@ A laptop that already has an older version (0.2–0.4): use **UPDATE.cmd**. Your
 
 There are two packages. Use the **offline** one if the laptop has no internet or a slow one:
 
-| Package                        | Size         | Internet on the laptop                                            |
-| ------------------------------ | ------------ | ----------------------------------------------------------------- |
-| `marina-pos-1.0.0-offline.zip` | about 420 MB | **not needed**: Node.js, PostgreSQL and everything else is inside |
-| `marina-pos-1.0.0.zip`         | about 12 MB  | needed once: downloads Node.js (30 MB) and PostgreSQL (340 MB)    |
+| Package                     | Size         | Internet on the laptop                                            |
+| --------------------------- | ------------ | ----------------------------------------------------------------- |
+| `shoppos-1.0.0-offline.zip` | about 420 MB | **not needed**: Node.js, PostgreSQL and everything else is inside |
+| `shoppos-1.0.0.zip`         | about 12 MB  | needed once: downloads Node.js (30 MB) and PostgreSQL (340 MB)    |
 
 The installer always uses what is already there first: a Node.js 22 (or newer) or PostgreSQL 14
 (or newer) already installed on the laptop is used instead of downloading.
@@ -51,10 +51,10 @@ The installer always uses what is already there first: a Node.js 22 (or newer) o
    [OK]   Internet  not needed (everything is in the vendor folder or already installed)
    ```
 
-4. At the end you see **"Marina POS is installed."** Double-click **Marina POS** on the desktop.
+4. At the end you see **"ShopPOS is installed."** Double-click **ShopPOS** on the desktop.
 
 **If something goes wrong** the window shows a red **ERROR** line with the reason and what to do.
-Everything is also written to **`C:\MarinaPOS\logs\install.log`**. Send that file.
+Everything is also written to **`C:\ShopPOS\logs\install.log`**. Send that file.
 
 **If a download fails** (antivirus, firewall or proxy can block PowerShell), the installer lists the
 links. Download those files with Chrome, put them in the **`vendor`** folder next to `INSTALL.cmd`,
@@ -62,14 +62,14 @@ and run INSTALL.cmd again. Or simply use the offline package.
 
 ## 2. First look
 
-| Check             | What should happen                                              |
-| ----------------- | --------------------------------------------------------------- |
-| Startup animation | The red Marina logo draws itself, then the login screen appears |
-| Login             | Tap **Shop Owner**, PIN **1234** (or the PIN you chose)         |
-| Address           | The screen is full size, with no address bar (kiosk mode)       |
+| Check             | What should happen                                               |
+| ----------------- | ---------------------------------------------------------------- |
+| Startup animation | The ShopPOS bag logo draws itself, then the login screen appears |
+| Login             | Tap **Shop Owner**, PIN **1234** (or the PIN you chose)          |
+| Address           | The screen is full size, with no address bar (kiosk mode)        |
 
 To leave full screen: user menu (bottom left) → **Exit full-screen POS** (a cashier needs the owner's
-PIN), or press **Alt + F4**. To open it again, double-click **Marina POS** on the desktop.
+PIN), or press **Alt + F4**. To open it again, double-click **ShopPOS** on the desktop.
 
 ## 3. Set up the receipt printer
 
@@ -80,7 +80,7 @@ PIN), or press **Alt + F4**. To open it again, double-click **Marina POS** on th
 
 | Check                  | What should happen                                                                      |
 | ---------------------- | --------------------------------------------------------------------------------------- |
-| Test receipt           | A receipt with the Marina logo, "Printer test" and a barcode                            |
+| Test receipt           | A receipt with the shop logo, "Printer test" and a barcode                              |
 | Width                  | Lines fill the paper. If text wraps badly, set _Characters per line_ to **42** and save |
 | Cut                    | The paper is cut (if your printer has a cutter)                                         |
 | **Open drawer** button | The cash drawer opens                                                                   |
@@ -126,24 +126,24 @@ discounts, price changes and voids).
 
 ## 4b. Customers, cash, reports and backups
 
-| Try this                                                                        | What should happen                                                        |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **Customers** → Add customer (give a credit limit, e.g. Rs 10,000)              | The customer is listed                                                    |
-| Billing → **F3** → pick the customer → add items → **F4** → **On account** (A)  | The bill is saved; the customer now owes that amount                      |
-| Customers → open the customer → **Receive payment**                             | What they owe goes down; a cash payment adds to today's drawer            |
-| Pick a **wholesale** customer with F3                                           | Prices switch to wholesale                                                |
-| **Expenses** → Add expense, paid from the drawer                                | Listed; the cash register's "should be in the drawer" goes down           |
-| **Cash register** → Cash out (as a cashier)                                     | Asks for the owner's PIN                                                  |
-| **Cash register** → **Close the day**, count the notes                          | Shows short / over, prints the day report, and makes a backup             |
-| **Dashboard** (first menu item)                                                 | Today's sales and profit, a 30-day chart, low stock warnings              |
-| **Reports** → each tab → **Excel** and **PDF**                                  | The files download and open in Excel / a PDF reader                       |
-| **Backups** → set the USB folder (e.g. `E:\MarinaBackups`), plug in a USB stick | **Back up now** → the backup shows ✓ USB and the file is on the stick     |
-| **Backups** → Restore an older backup (type RESTORE)                            | The data goes back to that time; a "before restore" backup is made first  |
-| **Audit log**                                                                   | Every sale, void, price change, login and setting change, with who did it |
+| Try this                                                                         | What should happen                                                        |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Customers** → Add customer (give a credit limit, e.g. Rs 10,000)               | The customer is listed                                                    |
+| Billing → **F3** → pick the customer → add items → **F4** → **On account** (A)   | The bill is saved; the customer now owes that amount                      |
+| Customers → open the customer → **Receive payment**                              | What they owe goes down; a cash payment adds to today's drawer            |
+| Pick a **wholesale** customer with F3                                            | Prices switch to wholesale                                                |
+| **Expenses** → Add expense, paid from the drawer                                 | Listed; the cash register's "should be in the drawer" goes down           |
+| **Cash register** → Cash out (as a cashier)                                      | Asks for the owner's PIN                                                  |
+| **Cash register** → **Close the day**, count the notes                           | Shows short / over, prints the day report, and makes a backup             |
+| **Dashboard** (first menu item)                                                  | Today's sales and profit, a 30-day chart, low stock warnings              |
+| **Reports** → each tab → **Excel** and **PDF**                                   | The files download and open in Excel / a PDF reader                       |
+| **Backups** → set the USB folder (e.g. `E:\ShopPOSBackups`), plug in a USB stick | **Back up now** → the backup shows ✓ USB and the file is on the stick     |
+| **Backups** → Restore an older backup (type RESTORE)                             | The data goes back to that time; a "before restore" backup is made first  |
+| **Audit log**                                                                    | Every sale, void, price change, login and setting change, with who did it |
 
 ## 5. Restart test
 
-Restart the laptop. After Windows starts, Marina POS should open by itself in Chrome
+Restart the laptop. After Windows starts, ShopPOS should open by itself in Chrome
 (it waits for the server, which can take up to a minute after a cold start).
 
 ## 6. Things to report back
@@ -159,7 +159,7 @@ Restart the laptop. After Windows starts, Marina POS should open by itself in Ch
 
 Unzip the new package and double-click **UPDATE.cmd**. It backs up all data, installs the new
 version, updates the database and checks that it starts. If anything fails it puts the old version
-and the data back by itself. The log is `C:\MarinaPOS\logs\update.log`.
+and the data back by itself. The log is `C:\ShopPOS\logs\update.log`.
 
 ## Remove the test install
 
@@ -167,16 +167,16 @@ Double-click **UNINSTALL.cmd** in the install folder. It removes the services an
 shortcuts but keeps the data. To delete everything, run in an admin PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File C:\MarinaPOS\uninstall.ps1 -RemoveData
+powershell -ExecutionPolicy Bypass -File C:\ShopPOS\uninstall.ps1 -RemoveData
 ```
 
 ## Where things are
 
 | What                | Where                                                                               |
 | ------------------- | ----------------------------------------------------------------------------------- |
-| App, database, logs | `C:\MarinaPOS`                                                                      |
-| Server log          | `C:\MarinaPOS\logs\MarinaPOS.out.log` and `MarinaPOS.err.log`                       |
-| Windows services    | `Marina POS` and `MarinaPOS-DB` (in _Services_)                                     |
-| Backups             | `C:\MarinaPOS\backups` (and your USB folder / Google Drive if set up)               |
+| App, database, logs | `C:\ShopPOS`                                                                        |
+| Server log          | `C:\ShopPOS\logs\ShopPOS.out.log` and `ShopPOS.err.log`                             |
+| Windows services    | `ShopPOS` and `ShopPOS-DB` (in _Services_)                                          |
+| Backups             | `C:\ShopPOS\backups` (and your USB folder / Google Drive if set up)                 |
 | Test logins         | Shop Owner PIN `1234` / `admin` + `admin123`; Super Admin `superadmin` + `super123` |
 | Real-shop logins    | `admin` and `superadmin` with the passwords chosen during INSTALL.cmd               |

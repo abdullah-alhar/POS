@@ -19,7 +19,7 @@ import {
   SETTINGS_SCHEMAS,
   type AllSettings,
   type SettingsSection,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { FormField } from '@/components/form-field';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';

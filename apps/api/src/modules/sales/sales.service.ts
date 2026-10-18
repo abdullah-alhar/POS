@@ -18,7 +18,7 @@ import {
   type SaleListItem,
   type SaleQuery,
   type VoidSaleInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import {
   AppException,
   badRequest,

@@ -6,7 +6,7 @@ import {
   type CategoryDto,
   type PublicSettings,
   type TaxRateDto,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { useCallback } from 'react';
 import { api } from './api';
 

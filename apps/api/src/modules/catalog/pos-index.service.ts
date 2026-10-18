@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { normalizeBarcode, type PosIndex, type PosIndexItem } from '@marina/shared';
+import { normalizeBarcode, type PosIndex, type PosIndexItem } from '@shoppos/shared';
 import { notFound } from '../../common/app-exception';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { Prisma } from '../../generated/prisma/client';

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, CornerDownRight, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CategoryDto } from '@marina/shared';
+import type { CategoryDto } from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';

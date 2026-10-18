@@ -1,6 +1,6 @@
 import { createParamDecorator, SetMetadata, type ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
-import { APPROVAL_HEADER, type Permission } from '@marina/shared';
+import { APPROVAL_HEADER, type Permission } from '@shoppos/shared';
 import type { RequestUser } from '../modules/auth/auth.types';
 import { unauthorized } from './app-exception';
 

@@ -6,7 +6,7 @@ import {
   type PublicSettings,
   receiptLayoutFromLegacy,
   type SettingsSection,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../../common/decorators';

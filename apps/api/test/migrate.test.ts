@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { runMigrations } from '../src/cli/migrate';
 
 const ADMIN_URL = (process.env.DATABASE_URL ?? '').replace(/\/[^/?]+(\?|$)/, '/postgres$1');
-const DB = 'marina_pos_migrate_test';
+const DB = 'shoppos_migrate_test';
 const URL = (process.env.DATABASE_URL ?? '').replace(/\/[^/?]+(\?|$)/, `/${DB}$1`);
 const DIR = path.resolve(__dirname, '..', 'prisma', 'migrations');
 

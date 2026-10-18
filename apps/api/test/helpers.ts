@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type TestAgent from 'supertest/lib/agent';
-import { DEFAULT_CASHIER_PERMISSIONS, type Permission } from '@marina/shared';
+import { DEFAULT_CASHIER_PERMISSIONS, type Permission } from '@shoppos/shared';
 import { createApp } from '../src/bootstrap';
 import { hashSecret } from '../src/modules/auth/password';
 import { SettingsService } from '../src/modules/settings/settings.service';

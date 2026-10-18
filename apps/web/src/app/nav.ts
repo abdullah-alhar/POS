@@ -10,7 +10,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
-import type { Permission } from '@marina/shared';
+import type { Permission } from '@shoppos/shared';
 
 export interface NavPage {
   to: string;

@@ -3,7 +3,7 @@ import {
   type ApiErrorBody,
   type ApprovalAction,
   type ErrorCode,
-} from '@marina/shared';
+} from '@shoppos/shared';
 
 export class ApiError extends Error {
   readonly status: number;

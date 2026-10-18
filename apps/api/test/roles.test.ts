@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS } from '@marina/shared';
+import { DEFAULT_SETTINGS } from '@shoppos/shared';
 import { createUser, loginAs, resetDb, standardUsers, startApp, type TestContext } from './helpers';
 
 let ctx: TestContext;
@@ -74,7 +74,7 @@ describe('Super Admin', () => {
     // The shop admin still manages normal settings.
     await adminHttp
       .put('/api/settings/shop')
-      .send({ name: 'Marina Cellular', address: 'Colombo', phone: '', email: '' })
+      .send({ name: 'My Shop', address: 'Colombo', phone: '', email: '' })
       .expect(200);
   });
 

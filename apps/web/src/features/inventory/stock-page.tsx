@@ -21,7 +21,7 @@ import {
   type PosIndexItem,
   type StockAdjustmentDto,
   type StockMovementDto,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { FormField } from '@/components/form-field';
 import { ItemSearch } from '@/components/item-search';

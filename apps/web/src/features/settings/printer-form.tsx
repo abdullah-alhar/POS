@@ -20,7 +20,7 @@ import {
   type PrinterSettings,
   type PrintResult,
   receiptHasLogo,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { FormField } from '@/components/form-field';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

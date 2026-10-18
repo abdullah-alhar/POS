@@ -15,13 +15,13 @@ export const hexColorSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .regex(/^#[0-9a-f]{6}$/, 'Use a colour like #ed1c24');
+  .regex(/^#[0-9a-f]{6}$/, 'Use a colour like #4f46e5');
 
 /** Look of the app. Only the Super Admin can change it (white-labelling for each shop). */
 export const brandingSettingsSchema = z.object({
   /** Shown in the browser tab and wherever there is no logo. */
   appName: z.string().trim().min(1, 'Enter the app name').max(40),
-  /** null = the built-in Marina Cellular logo. */
+  /** null = the built-in ShopPOS logo. */
   logo: imageDataUrlSchema('Logo', 300_000, true).nullable(),
   primaryColor: hexColorSchema,
   sidebar: z.enum(['dark', 'light']),
@@ -113,7 +113,7 @@ export const backupSettingsSchema = z.object({
   onDayClose: z.boolean(),
   /** How many backups to keep in the backup folder (older ones are removed). */
   keep: z.int().min(3).max(365),
-  /** Folder on a USB drive (e.g. E:\\MarinaBackups). Copied there when the drive is plugged in. */
+  /** Folder on a USB drive (e.g. E:\\ShopPOSBackups). Copied there when the drive is plugged in. */
   usbPath: z.string().trim().max(260),
   /** Upload to Google Drive when online (needs connecting on the Backups page). */
   driveUpload: z.boolean(),
@@ -155,13 +155,13 @@ export interface AllSettings {
 
 export const DEFAULT_SETTINGS: AllSettings = {
   branding: {
-    appName: 'Marina Cellular',
+    appName: 'My Shop',
     logo: null,
-    primaryColor: '#ed1c24',
+    primaryColor: '#4f46e5',
     sidebar: 'dark',
     startupAnimation: true,
   },
-  shop: { name: 'Marina Cellular', address: '', phone: '', email: '' },
+  shop: { name: 'My Shop', address: '', phone: '', email: '' },
   receipt: {
     layout: defaultReceiptLayout(),
     copies: 1,
@@ -209,7 +209,7 @@ export interface PublicSettings {
 
 /** Ready-made colour themes for the Branding page. */
 export const BRAND_PRESETS: { name: string; color: string }[] = [
-  { name: 'Marina Red', color: '#ed1c24' },
+  { name: 'Signal Red', color: '#ed1c24' },
   { name: 'Crimson', color: '#be123c' },
   { name: 'Sunset Orange', color: '#ea580c' },
   { name: 'Amber Gold', color: '#d97706' },

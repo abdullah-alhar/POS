@@ -6,7 +6,7 @@ import type {
   CategoryInput,
   TaxRateDto,
   TaxRateInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { badRequest, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';

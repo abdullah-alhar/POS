@@ -7,7 +7,7 @@ import {
   type ApprovalAction,
   type ApprovalResult,
   type ApproveInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { approvalRequired, forbidden } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';

@@ -8,7 +8,7 @@ import {
   type ImportRow,
   type ImportRowResult,
   type ProductImportInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { badRequest } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService, type Tx } from '../../prisma/prisma.service';

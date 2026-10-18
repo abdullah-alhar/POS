@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { isValidEan13 } from '@marina/shared';
+import { isValidEan13 } from '@shoppos/shared';
 import { nextDocumentNumber } from '../src/prisma/counters';
 import { resetDb, sampleProduct, standardUsers, startApp, type TestContext } from './helpers';
 

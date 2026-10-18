@@ -7,7 +7,7 @@ import {
   type ResetCredentialsInput,
   type UpdateUserInput,
   type UserDto,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { badRequest, conflict, forbidden, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService, type Tx } from '../../prisma/prisma.service';

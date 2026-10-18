@@ -5,7 +5,7 @@ import { HandCoins, Pencil, Plus, Truck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import type { z } from 'zod';
-import { supplierInputSchema, type SupplierDto } from '@marina/shared';
+import { supplierInputSchema, type SupplierDto } from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { FormField } from '@/components/form-field';
 import { MoneyInput } from '@/components/money-input';

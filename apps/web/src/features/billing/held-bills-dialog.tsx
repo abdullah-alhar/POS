@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Inbox, Loader2, PauseCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CustomerDto, HeldBillDto } from '@marina/shared';
+import type { CustomerDto, HeldBillDto } from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import {

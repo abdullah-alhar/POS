@@ -1,5 +1,5 @@
 {
-  "name": "marina-pos",
+  "name": "shoppos",
   "private": true,
   "version": "1.0.0",
   "packageManager": "pnpm@10.34.7",
@@ -7,18 +7,18 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "pnpm --filter @marina/shared build && pnpm -r --parallel --filter @marina/shared --filter @marina/api --filter @marina/web dev",
-    "build": "pnpm --filter @marina/shared build && pnpm --filter @marina/web build && pnpm --filter @marina/api build",
-    "start": "pnpm --filter @marina/api start",
-    "test": "pnpm --filter @marina/shared build && pnpm -r test",
+    "dev": "pnpm --filter @shoppos/shared build && pnpm -r --parallel --filter @shoppos/shared --filter @shoppos/api --filter @shoppos/web dev",
+    "build": "pnpm --filter @shoppos/shared build && pnpm --filter @shoppos/web build && pnpm --filter @shoppos/api build",
+    "start": "pnpm --filter @shoppos/api start",
+    "test": "pnpm --filter @shoppos/shared build && pnpm -r test",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
     "db:up": "docker compose up -d db",
-    "db:migrate": "pnpm --filter @marina/api db:migrate",
-    "db:seed": "pnpm --filter @marina/api db:seed",
-    "db:reset": "pnpm --filter @marina/api db:reset",
+    "db:migrate": "pnpm --filter @shoppos/api db:migrate",
+    "db:seed": "pnpm --filter @shoppos/api db:seed",
+    "db:reset": "pnpm --filter @shoppos/api db:reset",
     "release:win": "node scripts/build-release.mjs"
   },
   "devDependencies": {

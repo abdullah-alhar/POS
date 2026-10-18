@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, ScanBarcode, ShieldCheck, Tag, Trash2, TriangleAlert } from 'lucide-react';
-import { bpToPercentText, warrantyLabel, type CartTotals, type PosIndexItem } from '@marina/shared';
+import {
+  bpToPercentText,
+  warrantyLabel,
+  type CartTotals,
+  type PosIndexItem,
+} from '@shoppos/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useMoney } from '@/lib/queries';

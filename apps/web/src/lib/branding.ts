@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { DEFAULT_SETTINGS, type BrandingSettings } from '@marina/shared';
+import { DEFAULT_SETTINGS, type BrandingSettings } from '@shoppos/shared';
 import { usePublicSettings } from './queries';
 import { safeStorage } from './storage';
 

@@ -1,20 +1,19 @@
-# Architecture and agreed decisions
+# Architecture
 
-## Shop decisions (agreed 2026-10-13)
+## Defaults and decisions
 
 | Topic        | Decision                                                                                                                                                                                                                                             |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shop         | Phone accessories, retail + wholesale. Name set in Settings.                                                                                                                                                                                         |
+| Shop         | Small retail + wholesale shops. Name, logo and colour set in Settings.                                                                                                                                                                               |
 | Currency     | LKR (Rs). Stored as integer cents; shown without cents in the UI and on receipts.                                                                                                                                                                    |
 | Tax          | Prices include tax. Default rate 0%. VAT can be switched on in Settings (rates managed there).                                                                                                                                                       |
 | Rounding     | Bill totals and percentage discounts round to the nearest whole rupee (`pos.roundingStep = 100`). The difference is stored as `Sale.roundingAdjustment`. Rounding applies to every payment method so the total shown always matches what is charged. |
 | Bill numbers | `INV-YYYY-000001`, restarting every year. Gap-free (counter row locked inside the sale transaction).                                                                                                                                                 |
-| Zero stock   | Selling is allowed with a warning, and each such sale is written to the audit log (Phase 2).                                                                                                                                                         |
+| Zero stock   | Selling is allowed with a warning, and each such sale is written to the audit log.                                                                                                                                                                   |
 | Printer      | Generic ESC/POS 80 mm, browser printing fallback. Labels on A4 sticker sheets via the browser.                                                                                                                                                       |
 | Receipts     | English only for now. Layout built from blocks so Sinhala/Tamil can later be printed as images.                                                                                                                                                      |
-| Import       | CSV/Excel product import in Phase 3.                                                                                                                                                                                                                 |
-| Backups      | Local folder + USB copy + optional Google Drive upload when online; must work fully offline (Phase 5).                                                                                                                                               |
-| Testing      | Quick Windows build after Phase 2 to try printing, the service and kiosk mode early.                                                                                                                                                                 |
+| Import       | CSV/Excel product import.                                                                                                                                                                                                                            |
+| Backups      | Local folder + USB copy + optional Google Drive upload when online; must work fully offline.                                                                                                                                                         |
 
 ## How money is handled
 
@@ -47,8 +46,8 @@ the same transaction.
 Branding is a settings section protected by the Super Admin-only `branding.manage` permission. The web
 app sets the `--brand` CSS variable from it; every accent (buttons, focus rings, highlights, sidebar
 marker, startup animation) derives from that one colour. The last brand is cached in the browser so the
-next start paints the right colour immediately. With no uploaded logo, the built-in Marina Cellular
-vector logo is used (`apps/web/src/components/brand/marina-paths.ts`).
+next start paints the right colour immediately. With no uploaded logo, the built-in ShopPOS
+vector logo is used (`apps/web/src/components/brand/logo-paths.ts`).
 
 Every user can upload a profile photo (cropped and shrunk to 256 px in the browser, stored as a small
 data URL); admins can set photos for others. Photos are kept out of the audit log.

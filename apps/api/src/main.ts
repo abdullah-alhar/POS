@@ -16,7 +16,7 @@ export function startHttpRedirect(port: number, host: string, httpsPort: number)
 
 async function main() {
   const cfg = config();
-  const log = new Logger('Marina POS');
+  const log = new Logger('ShopPOS');
 
   let httpsOptions: { key: Buffer; cert: Buffer } | undefined;
   if (cfg.tlsDir) {

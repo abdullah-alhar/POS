@@ -1,7 +1,7 @@
 import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
-import { hasPermission, type Permission } from '@marina/shared';
+import { hasPermission, type Permission } from '@shoppos/shared';
 import { forbidden, unauthorized } from '../../common/app-exception';
 import { IS_PUBLIC, REQUIRED_PERMISSIONS } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';

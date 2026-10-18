@@ -5,11 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Theme. Every accent comes from --brand (set from Branding settings, default Marina red).
- * Surfaces are neutral greys and near-black, taken from the Marina Cellular artwork.
+ * Theme. Every accent comes from --brand (set from Branding settings, default indigo).
+ * Surfaces are neutral greys and near-black.
  */
 :root {
-  --brand: #ed1c24;
+  --brand: #4f46e5;
   --brand-foreground: #ffffff;
   --radius: 0.7rem;
 

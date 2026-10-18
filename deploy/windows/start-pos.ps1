@@ -1,5 +1,5 @@
 <#
-  Opens Marina POS in Chrome (or Edge) kiosk mode (full screen, no address bar).
+  Opens ShopPOS in Chrome (or Edge) kiosk mode (full screen, no address bar).
   Runs at Windows start and from the desktop icon. Waits until the POS server is ready.
   To leave full screen: user menu > "Exit full-screen POS", or press Alt+F4.
 #>
@@ -9,7 +9,7 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $cfg = Get-Content (Join-Path $Root 'config\kiosk.json') -Raw | ConvertFrom-Json
 
 # Already open? Bring nothing up twice.
-$profileDir = Join-Path $env:LOCALAPPDATA 'MarinaPOS\chrome'
+$profileDir = Join-Path $env:LOCALAPPDATA 'ShopPOS\chrome'
 $running = Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.CommandLine -like "*$profileDir*" }
 if ($running) { exit 0 }

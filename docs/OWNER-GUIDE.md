@@ -1,17 +1,17 @@
-# Marina POS: owner's guide
+# ShopPOS: owner's guide
 
 **The menu on the left has 9 entries:** Home, Billing, Sales, Customers, Products, Purchases, Cash,
 Reports and Settings. Some have tabs at the top (for example **Products** has Products · Stock ·
 Barcode labels · Categories & brands).
 
 This guide is for the shop owner. It explains the daily routine and what to do when something goes
-wrong. Marina POS runs on the shop laptop and works without internet.
+wrong. ShopPOS runs on the shop laptop and works without internet.
 
 ## Every day
 
 ### Morning: open the day
 
-1. Turn on the laptop. Marina POS opens by itself (full screen).
+1. Turn on the laptop. ShopPOS opens by itself (full screen).
 2. Tap your name and type your PIN.
 3. Go to **Billing**. Press **Open the day** and type the cash that is in the drawer.
 
@@ -71,7 +71,7 @@ opening the drawer and selling above a customer's credit limit. You can change t
 - To sell on credit: **F3**, choose the customer, then **F4 → On account**.
 - When they pay: **Customers →** open the customer **→ Receive payment**. Cash payments are added
   to the day's drawer.
-- **Adjust balance** is for old amounts from your book before Marina POS.
+- **Adjust balance** is for old amounts from your book before ShopPOS.
 
 ## Returns
 
@@ -127,12 +127,12 @@ taken off the profit in the reports.
 
 ## Backups (important)
 
-Marina POS makes a backup **every night at 21:30** and **when you close the day**. They are kept in
-`C:\MarinaPOS\backups` (the newest 30).
+ShopPOS makes a backup **every night at 21:30** and **when you close the day**. They are kept in
+`C:\ShopPOS\backups` (the newest 30).
 
 A backup on the same laptop does not help if the laptop is stolen or broken. Keep a copy elsewhere:
 
-- **USB stick**: go to **Settings → Backups**, type a folder on the stick (for example `E:\MarinaBackups`) and
+- **USB stick**: go to **Settings → Backups**, type a folder on the stick (for example `E:\ShopPOSBackups`) and
   press **Save**. Whenever the stick is plugged in, the newest backup is copied to it. Take the stick
   home once a week.
 - **Google Drive** (optional): follow the steps on the **Settings → Backups** page once. Backups are uploaded
@@ -144,9 +144,9 @@ backup for more than a day and a half.
 ### Restoring a backup
 
 Only do this if data was lost or damaged. **Backups →** choose the backup **→ Restore**, type
-`RESTORE`. All data goes back to that time; sales made after it are replaced. Marina POS makes a
-backup of the data as it is now first, so a restore can be undone. On a new laptop, install Marina
-POS, then restore the newest backup from the USB stick (it is listed under "Backups on the USB
+`RESTORE`. All data goes back to that time; sales made after it are replaced. ShopPOS makes a
+backup of the data as it is now first, so a restore can be undone. On a new laptop, install
+ShopPOS, then restore the newest backup from the USB stick (it is listed under "Backups on the USB
 drive").
 
 ## Users and PINs
@@ -162,22 +162,22 @@ drive").
 ## Leaving full screen
 
 Your name (bottom left) **→ Exit full-screen POS**. A cashier needs your PIN. **Alt + F4** also works.
-To open Marina POS again, double-click **Marina POS** on the desktop.
+To open ShopPOS again, double-click **ShopPOS** on the desktop.
 
 ## When something goes wrong
 
-| Problem                                 | What to do                                                                                                              |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Marina POS does not open after starting | Wait one minute, then double-click **Marina POS** on the desktop                                                        |
-| "The receipt printer did not answer"    | Check the printer is on and has paper. The receipt prints with the browser instead. **Settings → Printer → Test print** |
-| The drawer does not open                | Check the drawer cable goes into the printer. **Settings → Printer → Open drawer** to test                              |
-| The scanner types into the wrong place  | Press **F2** (search box) and scan again                                                                                |
-| Forgot a PIN                            | The owner resets it under **Settings → Users**. The Super Admin can reset the owner's                                   |
-| "The day is not open"                   | **Billing → Open the day**                                                                                              |
+| Problem                                | What to do                                                                                                              |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| ShopPOS does not open after starting   | Wait one minute, then double-click **ShopPOS** on the desktop                                                           |
+| "The receipt printer did not answer"   | Check the printer is on and has paper. The receipt prints with the browser instead. **Settings → Printer → Test print** |
+| The drawer does not open               | Check the drawer cable goes into the printer. **Settings → Printer → Open drawer** to test                              |
+| The scanner types into the wrong place | Press **F2** (search box) and scan again                                                                                |
+| Forgot a PIN                           | The owner resets it under **Settings → Users**. The Super Admin can reset the owner's                                   |
+| "The day is not open"                  | **Billing → Open the day**                                                                                              |
 
-Logs for the person who set up the POS: `C:\MarinaPOS\logs`.
+Logs for the person who set up the POS: `C:\ShopPOS\logs`.
 
-## Updating Marina POS
+## Updating ShopPOS
 
 You get a new folder. Double-click **UPDATE.cmd** in it and choose **Yes**. It backs up all data
 first, installs the new version and checks that it works. If anything goes wrong it puts the old

@@ -18,7 +18,7 @@ import {
   type HoldBillInput,
   type SaleQuery,
   type VoidSaleInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { HeldBillsService } from './held-bills.service';

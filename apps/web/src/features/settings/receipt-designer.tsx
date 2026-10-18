@@ -41,7 +41,7 @@ import {
   type ReceiptElementType,
   type ReceiptField,
   type ReceiptSettings,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';

@@ -16,7 +16,7 @@ import {
   type CancelInput,
   type ExpenseInput,
   type ExpenseQuery,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { ExpensesService } from './expenses.service';

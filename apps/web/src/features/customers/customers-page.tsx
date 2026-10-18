@@ -13,7 +13,7 @@ import {
   type CustomerLedgerEntryDto,
   type Page,
   type SaleListItem,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { FormField } from '@/components/form-field';
 import { MoneyInput } from '@/components/money-input';

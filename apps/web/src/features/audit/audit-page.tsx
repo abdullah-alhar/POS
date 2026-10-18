@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, ScrollText } from 'lucide-react';
-import type { AuditEntryDto, Page, UserDto } from '@marina/shared';
+import type { AuditEntryDto, Page, UserDto } from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';

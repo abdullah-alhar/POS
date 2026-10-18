@@ -20,7 +20,7 @@ import {
   type CustomerInput,
   type CustomerPaymentInput,
   type CustomerQuery,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { CustomersService } from './customers.service';

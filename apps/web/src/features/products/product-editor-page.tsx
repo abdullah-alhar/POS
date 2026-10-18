@@ -19,7 +19,7 @@ import {
   type ProductDto,
   type ProductInput,
   type ProductInputParsed,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FormField } from '@/components/form-field';
 import { MoneyInput } from '@/components/money-input';

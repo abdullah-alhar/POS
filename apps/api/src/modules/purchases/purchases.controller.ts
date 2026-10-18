@@ -15,7 +15,7 @@ import {
   purchaseQuerySchema,
   type PurchaseInput,
   type PurchaseQuery,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { PurchasesService } from './purchases.service';

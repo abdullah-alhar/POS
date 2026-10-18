@@ -1,4 +1,4 @@
-import { code128Svg, formatMoney } from '@marina/shared';
+import { code128Svg, formatMoney } from '@shoppos/shared';
 
 /** A4 sticker sheets. Sizes in millimetres. */
 export interface SheetLayout {

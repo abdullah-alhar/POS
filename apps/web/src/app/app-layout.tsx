@@ -15,7 +15,7 @@ import {
 import { Link, NavLink, Outlet, useLocation, useMatches, useNavigate } from 'react-router';
 import { KeyboardLayer, openPanel } from './keyboard-layer';
 import { NAV, pageMatches, type NavItem, type NavPage } from './nav';
-import { ROLE_LABELS } from '@marina/shared';
+import { ROLE_LABELS } from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -257,7 +257,7 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
         open={confirmExit}
         onOpenChange={setConfirmExit}
         title="Close the POS screen?"
-        description="The POS keeps running in the background. Open it again with the 'Marina POS' icon on the desktop. (Keyboard: Alt+F4 also closes it.)"
+        description="The POS keeps running in the background. Open it again with the 'ShopPOS' icon on the desktop. (Keyboard: Alt+F4 also closes it.)"
         confirmText="Close POS"
         onConfirm={() => exitPos.mutate()}
       />

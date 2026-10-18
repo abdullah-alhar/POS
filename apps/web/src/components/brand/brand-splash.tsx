@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import { cachedBrand, useBranding } from '@/lib/branding';
-import { MARINA_CELLULAR, MARINA_LETTERS, MARINA_VIEWBOX } from './marina-paths';
+import { LOGO_MARK, LOGO_VIEWBOX, LOGO_WORDMARK } from './logo-paths';
 
 const PLAYED_KEY = 'pos-splash-played';
 const REPLAY_EVENT = 'pos:replay-splash';
@@ -90,13 +90,12 @@ function SplashLogo() {
     return <img src={branding.logo} alt="" className="splash-image" />;
   }
   return (
-    <svg viewBox={MARINA_VIEWBOX} className="splash-logo">
+    <svg viewBox={LOGO_VIEWBOX} className="splash-logo" fillRule="evenodd">
       <defs>
         <clipPath id={`clip-${uid}`}>
-          {MARINA_LETTERS.map((d, i) => (
-            <path key={i} d={d} />
+          {[...LOGO_MARK, ...LOGO_WORDMARK].map((d, i) => (
+            <path key={i} d={d} clipRule="evenodd" />
           ))}
-          <path d={MARINA_CELLULAR} />
         </clipPath>
         <linearGradient id={`shine-${uid}`} x1="0" x2="1" y1="0" y2="0">
           <stop offset="0" stopColor="#fff" stopOpacity="0" />
@@ -104,22 +103,24 @@ function SplashLogo() {
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {MARINA_LETTERS.map((d, i) => (
+      {LOGO_MARK.map((d, i) => (
         <path
           key={i}
-          className="splash-letter"
+          className="splash-mark"
           style={{ '--i': i } as React.CSSProperties}
           pathLength={1}
           d={d}
         />
       ))}
-      <path className="splash-cellular" d={MARINA_CELLULAR} />
+      {LOGO_WORDMARK.map((d, i) => (
+        <path key={i} className="splash-letter" style={{ '--i': i } as React.CSSProperties} d={d} />
+      ))}
       <g clipPath={`url(#clip-${uid})`}>
         <rect
           className="splash-shine"
           x="0"
           y="-20"
-          width="140"
+          width="120"
           height="200"
           fill={`url(#shine-${uid})`}
         />

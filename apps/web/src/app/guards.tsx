@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Lock, SearchX } from 'lucide-react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
-import type { Permission } from '@marina/shared';
+import type { Permission } from '@shoppos/shared';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';

@@ -24,7 +24,7 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
-export const DRIVE_FOLDER_NAME = 'Marina POS Backups';
+export const DRIVE_FOLDER_NAME = 'ShopPOS Backups';
 
 const b64url = (b: Buffer) =>
   b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -73,7 +73,7 @@ export async function startDriveSignIn(
     const finish = (ok: boolean, text: string) => {
       res.writeHead(ok ? 200 : 400, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(
-        `<!doctype html><meta charset="utf-8"><title>Marina POS</title><body style="font-family:system-ui;padding:40px;text-align:center">` +
+        `<!doctype html><meta charset="utf-8"><title>ShopPOS</title><body style="font-family:system-ui;padding:40px;text-align:center">` +
           `<h2>${ok ? 'Google Drive is connected' : 'Google Drive was not connected'}</h2><p>${text}</p><p>You can close this tab.</p>`,
       );
       clearTimeout(timer);

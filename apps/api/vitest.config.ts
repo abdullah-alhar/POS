@@ -1,7 +1,7 @@
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
-const TEST_DB = 'postgresql://pos:pos@localhost:5432/marina_pos_test';
+const TEST_DB = 'postgresql://pos:pos@localhost:5432/shoppos_test';
 
 export default defineConfig({
   // SWC keeps decorator metadata, which NestJS needs for dependency injection.

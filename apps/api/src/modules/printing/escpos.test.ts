@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { ReceiptDoc } from '@marina/shared';
+import type { ReceiptDoc } from '@shoppos/shared';
 import { drawerKick, encodeReceipt, renderText, toPrintable, wrap } from './escpos';
 
 const doc: ReceiptDoc = {
   blocks: [
     { type: 'logo' },
-    { type: 'text', text: 'Marina Cellular', align: 'center', bold: true },
+    { type: 'text', text: 'My Shop', align: 'center', bold: true },
     { type: 'divider' },
     { type: 'text', text: 'Anker 20W Charger – White' },
     { type: 'row', left: '  2 x 4,500', right: '9,000' },

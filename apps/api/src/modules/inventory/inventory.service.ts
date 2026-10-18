@@ -7,7 +7,7 @@ import {
   type StockAdjustmentDto,
   type StockAdjustmentInput,
   type StockMovementDto,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { badRequest, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { nextDocumentNumber } from '../../prisma/counters';

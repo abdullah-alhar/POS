@@ -12,7 +12,7 @@ import {
   warrantyEnd,
   warrantyLabel,
   type ReceiptField,
-} from '@marina/shared';
+} from '@shoppos/shared';
 
 function pad2(n: number) {
   return String(n).padStart(2, '0');

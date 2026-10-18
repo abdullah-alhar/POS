@@ -1,8 +1,8 @@
 /*
- * Startup animation, based on the Marina loader:
- *   0.00–1.50s  letter outlines draw in, one after another
- *   0.90–2.00s  letters fill with the brand colour
- *   1.65–2.15s  "Cellular" slides in and the logo glows
+ * Startup animation:
+ *   0.00–1.30s  the bag outline draws in (body, then handle)
+ *   0.90–1.50s  the bag fills with the brand colour
+ *   1.00–2.15s  the "ShopPOS" letters slide in one after another and the logo glows
  *   2.05–2.95s  a light sweeps across the letters
  *   0.10–2.80s  progress line fills underneath
  *   3.00–3.50s  everything fades out with a gentle zoom
@@ -56,7 +56,7 @@
   animation: splash-glow 1.2s ease 1.65s both;
 }
 
-.splash-letter {
+.splash-mark {
   fill: var(--brand);
   fill-opacity: 0;
   stroke: var(--brand);
@@ -64,15 +64,15 @@
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
   animation:
-    splash-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--i) * 0.12s) forwards,
-    splash-fill 0.45s ease calc(0.9s + var(--i) * 0.12s) forwards;
+    splash-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) calc(var(--i) * 0.4s) forwards,
+    splash-fill 0.45s ease calc(0.9s + var(--i) * 0.15s) forwards;
 }
 
-.splash-cellular {
+.splash-letter {
   fill: var(--brand);
   opacity: 0;
   transform: translateX(28px);
-  animation: splash-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 1.65s forwards;
+  animation: splash-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) calc(1s + var(--i) * 0.09s) forwards;
 }
 
 .splash-shine {

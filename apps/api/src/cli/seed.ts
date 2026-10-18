@@ -9,7 +9,7 @@
  */
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { makeInternalEan13 } from '@marina/shared';
+import { makeInternalEan13 } from '@shoppos/shared';
 import { PrismaClient } from '../generated/prisma/client';
 import { hashSecret } from '../modules/auth/password';
 

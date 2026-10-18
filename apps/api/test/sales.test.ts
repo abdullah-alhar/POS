@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { CheckoutInput } from '@marina/shared';
+import type { CheckoutInput } from '@shoppos/shared';
 import { createUser, loginAs, resetDb, standardUsers, startApp, type TestContext } from './helpers';
 
 let ctx: TestContext;

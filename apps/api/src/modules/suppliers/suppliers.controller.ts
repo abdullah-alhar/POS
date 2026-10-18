@@ -4,7 +4,7 @@ import {
   supplierPaymentSchema,
   type SupplierInput,
   type SupplierPaymentInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { SuppliersService } from './suppliers.service';

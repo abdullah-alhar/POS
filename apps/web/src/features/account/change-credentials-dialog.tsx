@@ -9,7 +9,7 @@ import {
   type ChangePasswordInput,
   type AuthUser,
   type ChangePinInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { FormField } from '@/components/form-field';
 import { Button } from '@/components/ui/button';
 import {

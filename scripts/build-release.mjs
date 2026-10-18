@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Builds the Windows release: release/marina-pos-<version>/ and a .zip of it.
+ * Builds the Windows release: release/shoppos-<version>/ and a .zip of it.
  *
  *   pnpm release:win             app + install scripts (the laptop downloads Node.js/PostgreSQL once)
  *   pnpm release:win --offline   also puts Node.js, PostgreSQL, WinSW and the VC++ runtime in /vendor,
@@ -19,7 +19,7 @@ import { pipeline } from 'node:stream/promises';
 const root = path.resolve(import.meta.dirname, '..');
 const args = new Set(process.argv.slice(2));
 const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
-const name = `marina-pos-${version}${args.has('--offline') || args.has('--with-vendor') ? '-offline' : ''}`;
+const name = `shoppos-${version}${args.has('--offline') || args.has('--with-vendor') ? '-offline' : ''}`;
 const out = path.join(root, 'release', name);
 
 // Everything the laptop would otherwise download during install (used with --offline).
@@ -92,7 +92,7 @@ await cp(
 );
 await writeFile(
   path.join(out, 'app/api/package.json'),
-  JSON.stringify({ name: '@marina/api', version, private: true, main: 'dist/main.js' }, null, 2),
+  JSON.stringify({ name: '@shoppos/api', version, private: true, main: 'dist/main.js' }, null, 2),
 );
 await cp(path.join(root, 'apps/web/dist'), path.join(out, 'app/web/dist'), { recursive: true });
 

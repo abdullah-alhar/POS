@@ -6,7 +6,7 @@ import {
   type CreateUserInput,
   type ResetCredentialsInput,
   type UpdateUserInput,
-} from '@marina/shared';
+} from '@shoppos/shared';
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { UsersService } from './users.service';
