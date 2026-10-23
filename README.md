@@ -27,8 +27,10 @@ logo and colour are set in **Settings → Look**.
   preview; ESC/POS thermal printing with browser fallback
 - Settings with search, a setup check, compare / undo of unsaved changes, history with undo, and
   copy to / from a file
-- Built-in assistant for the receipt and settings (works offline); optional free local AI through
-  Ollama, private to the shop
+- Ask on every page (Ctrl+J): sales, comparisons, best sellers, low stock, prices, balances, cash
+  and how-to answers from the shop's own data, plus assistants in Settings and the Receipt Studio;
+  all work offline, and can optionally use a free AI (Groq, Gemini, OpenRouter, Mistral,
+  Cerebras, GitHub Models, any OpenAI-compatible service, or Ollama on the laptop)
 - Backups to a local folder, USB stick and Google Drive
 - Windows installer with self-rolling-back updates, HTTPS and kiosk mode
 

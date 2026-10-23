@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import {
   applySettingChanges,
@@ -11,23 +11,23 @@ import {
   RECEIPT_FIELD_HELP,
   RECEIPT_TEMPLATES,
   receiptActionSchema,
-  type AiSettings,
-  type AssistantStatus,
   type ReceiptAction,
   type ReceiptElement,
   type SettingChange,
 } from '@shoppos/shared';
-import { AppException } from '../../common/app-exception';
 import { SettingsService } from '../settings/settings.service';
-import { chatJson, listModels, LocalModelError } from './ollama';
+import { AiError } from './ai-error';
+import { AiService } from './ai.service';
 
-/** Where an answer came from: the built-in assistant (instant) or the local AI model. */
+/** Where an answer came from: the built-in assistant (instant, offline) or the AI. */
 export type AssistantSource = 'built-in' | 'ai';
 
 export interface ReceiptAssistantAnswer {
   reply: string;
   actions: ReceiptAction[];
   source: AssistantSource;
+  /** The AI was asked but could not answer (no internet, no key …); the reply says what to do. */
+  aiProblem?: string;
 }
 
 export interface SettingsAssistantAnswer {
@@ -35,10 +35,8 @@ export interface SettingsAssistantAnswer {
   changes: SettingChange[];
   problems: string[];
   source: AssistantSource;
+  aiProblem?: string;
 }
-
-/** CPU models can take a while, especially the first time the model is loaded. */
-const AI_TIMEOUT_MS = 120_000;
 
 const RECEIPT_ANSWER = z.object({
   reply: z.string().max(600),
@@ -115,50 +113,10 @@ Rules: change only what was asked. Money amounts are in cents (Rs 10 = 1000). If
  */
 @Injectable()
 export class AssistantService {
-  private readonly logger = new Logger('Assistant');
-  /** One AI question at a time, so the shop laptop stays fast for billing. */
-  private busy = false;
-
-  constructor(private readonly settings: SettingsService) {}
-
-  /** With `probe` off (the default while the AI is off) the AI server is not contacted. */
-  async status(
-    ai: AiSettings = this.settings.get('ai'),
-    probe = ai.enabled,
-  ): Promise<AssistantStatus> {
-    const base = { enabled: ai.enabled, model: ai.model };
-    if (!probe) {
-      return {
-        ...base,
-        reachable: false,
-        models: [],
-        modelReady: false,
-        problem: 'The local AI model is turned off.',
-      };
-    }
-    try {
-      const models = await listModels(ai.url);
-      const modelReady = models.some((m) => m === ai.model || m === `${ai.model}:latest`);
-      return {
-        ...base,
-        reachable: true,
-        models,
-        modelReady,
-        problem: modelReady
-          ? null
-          : `The model "${ai.model}" is not downloaded. Open a Command Prompt and run: ollama pull ${ai.model}`,
-      };
-    } catch (err) {
-      return {
-        ...base,
-        reachable: false,
-        models: [],
-        modelReady: false,
-        problem:
-          err instanceof LocalModelError ? err.message : 'The AI server could not be reached.',
-      };
-    }
-  }
+  constructor(
+    private readonly settings: SettingsService,
+    private readonly ai: AiService,
+  ) {}
 
   async receipt(input: {
     message: string;
@@ -168,13 +126,28 @@ export class AssistantService {
   }): Promise<ReceiptAssistantAnswer> {
     const builtIn = interpretReceiptCommand(input.message, input.layout, input.selectedIds);
     if (builtIn.understood) return { ...builtIn, source: 'built-in' };
-    const ai = this.settings.get('ai');
-    if (!ai.enabled) return { reply: offlineHint(builtIn.reply), actions: [], source: 'built-in' };
+    if (!(await this.ai.available()))
+      return {
+        reply: `${builtIn.reply} ${await this.ai.unavailableReason()}`,
+        actions: [],
+        source: 'built-in',
+      };
 
     const pieces = input.layout.map(pieceLine).join('\n') || '(empty)';
     const selected = input.selectedIds.length ? input.selectedIds.join(', ') : 'none';
     const user = `Receipt now, top to bottom (${input.copies} copy per bill):\n${pieces}\nSelected pieces: ${selected}\n\nRequest: ${input.message}`;
-    const raw = await this.ask(ai, RECEIPT_SYSTEM, user, RECEIPT_ANSWER);
+    let raw: unknown;
+    try {
+      raw = await this.ai.json(RECEIPT_SYSTEM, user, RECEIPT_ANSWER);
+    } catch (err) {
+      if (!(err instanceof AiError)) throw err;
+      return {
+        reply: `${builtIn.reply} (${err.message})`,
+        actions: [],
+        source: 'built-in',
+        aiProblem: err.message,
+      };
+    }
     // Keep each valid action; anything else the model made up is dropped.
     const parsed = raw as { reply?: unknown; actions?: unknown };
     const actions = (Array.isArray(parsed.actions) ? parsed.actions : [])
@@ -197,9 +170,13 @@ export class AssistantService {
         source: 'built-in',
       };
     }
-    const ai = this.settings.get('ai');
-    if (!ai.enabled)
-      return { reply: offlineHint(builtIn.reply), changes: [], problems: [], source: 'built-in' };
+    if (!(await this.ai.available()))
+      return {
+        reply: `${builtIn.reply} ${await this.ai.unavailableReason()}`,
+        changes: [],
+        problems: [],
+        source: 'built-in',
+      };
 
     const now = Object.keys(ASSISTANT_SETTINGS)
       .map((path) => {
@@ -208,12 +185,23 @@ export class AssistantService {
         return `${path} = ${JSON.stringify(value)} (${formatSetting(path, value)})`;
       })
       .join('\n');
-    const raw = await this.ask(
-      ai,
-      settingsSystem(),
-      `Settings now:\n${now}\n\nRequest: ${message}`,
-      SETTINGS_ANSWER,
-    );
+    let raw: unknown;
+    try {
+      raw = await this.ai.json(
+        settingsSystem(),
+        `Settings now:\n${now}\n\nRequest: ${message}`,
+        SETTINGS_ANSWER,
+      );
+    } catch (err) {
+      if (!(err instanceof AiError)) throw err;
+      return {
+        reply: `${builtIn.reply} (${err.message})`,
+        changes: [],
+        problems: [],
+        source: 'built-in',
+        aiProblem: err.message,
+      };
+    }
     const parsed = raw as { reply?: unknown; changes?: unknown };
     const proposed: SettingChange[] = [];
     for (const c of Array.isArray(parsed.changes) ? parsed.changes : []) {
@@ -236,53 +224,11 @@ export class AssistantService {
       source: 'ai',
     };
   }
-
-  private async ask(ai: AiSettings, system: string, user: string, schema: z.ZodType) {
-    if (this.busy) {
-      throw new AppException(
-        HttpStatus.TOO_MANY_REQUESTS,
-        'BUSY',
-        'The assistant is still answering the last question. Please wait a moment.',
-      );
-    }
-    this.busy = true;
-    try {
-      return await chatJson(ai.url, {
-        model: ai.model,
-        system,
-        user,
-        format: z.toJSONSchema(schema),
-        timeoutMs: AI_TIMEOUT_MS,
-      });
-    } catch (err) {
-      if (err instanceof LocalModelError) {
-        this.logger.warn(`Local AI failed (${err.reason}): ${err.message}`);
-        throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, 'AI_UNAVAILABLE', aiHelp(err, ai));
-      }
-      throw err;
-    } finally {
-      this.busy = false;
-    }
-  }
 }
 
-function offlineHint(reply: string) {
-  return `${reply} For other requests, turn on the free local AI in Settings → Assistant.`;
-}
-
-function replyText(reply: unknown, count: number) {
+/** The AI's own words, or a plain sentence when it gave none. */
+export function replyText(reply: unknown, count: number) {
   const text = typeof reply === 'string' ? reply.trim() : '';
   if (text) return text.slice(0, 600);
-  return count ? 'Here is what I would change.' : 'I could not do that with the receipt tools.';
-}
-
-function aiHelp(err: LocalModelError, ai: AiSettings) {
-  switch (err.reason) {
-    case 'unreachable':
-      return `${err.message} If it is not installed, get it free from ollama.com, then run: ollama pull ${ai.model}`;
-    case 'no-model':
-      return `The AI model "${ai.model}" is not downloaded. Open a Command Prompt and run: ollama pull ${ai.model}`;
-    default:
-      return err.message;
-  }
+  return count ? 'Here is what I would change.' : 'I could not do that with the tools I have.';
 }

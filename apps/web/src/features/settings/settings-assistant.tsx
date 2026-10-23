@@ -22,10 +22,11 @@ interface Answer {
   changes: SettingChange[];
   problems: string[];
   source: 'built-in' | 'ai';
+  aiProblem?: string;
 }
 
 /** Changes the assistant suggests: shown side by side, saved only when approved. */
-function Proposal({ next, sections }: { next: AllSettings; sections: SettingsSection[] }) {
+export function Proposal({ next, sections }: { next: AllSettings; sections: SettingsSection[] }) {
   const qc = useQueryClient();
   const [done, setDone] = useState(false);
   // Worked out once, so the table still shows what was changed after it is saved.
@@ -80,6 +81,7 @@ export function SettingsAssistant() {
         reply: answer.reply || 'I could not find a setting to change.',
         problems: answer.problems,
         source: answer.source,
+        notice: answer.aiProblem,
       };
     }
     const result = applySettingChanges(now, answer.changes);
@@ -94,6 +96,7 @@ export function SettingsAssistant() {
             : 'That is already how it is set.'),
       problems,
       source: answer.source,
+      notice: answer.aiProblem,
       extra: result.sections.length ? (
         <Proposal next={result.next} sections={result.sections} />
       ) : undefined,

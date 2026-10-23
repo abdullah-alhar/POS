@@ -1,3 +1,4 @@
+import { AI_PROVIDERS, type AiProviderId } from './ai-providers';
 import { bpToPercentText } from './money';
 import { APPROVAL_ACTIONS, type ApprovalAction } from './permissions';
 import { diffLayouts, summarizeChanges, type LayoutChange } from './receipt-tools';
@@ -105,9 +106,21 @@ export const SETTING_INFO: Record<string, { label: string; format?: (v: unknown)
   'branding.primaryColor': { label: 'Colour' },
   'branding.sidebar': { label: 'Sidebar' },
   'branding.startupAnimation': { label: 'Startup animation', format: yesNo },
-  'ai.enabled': { label: 'Use the local AI model', format: yesNo },
-  'ai.url': { label: 'AI server address' },
-  'ai.model': { label: 'AI model' },
+  'ai.mode': {
+    label: 'AI',
+    format: (v) =>
+      ({ off: 'Built-in only', online: 'Free online AI', local: 'AI on this computer' })[
+        String(v)
+      ] ?? String(v),
+  },
+  'ai.provider': {
+    label: 'Online AI service',
+    format: (v) => AI_PROVIDERS[v as AiProviderId]?.name ?? String(v),
+  },
+  'ai.model': { label: 'Online AI model', format: (v) => (v ? String(v) : 'Recommended') },
+  'ai.customUrl': { label: 'Other service address' },
+  'ai.localUrl': { label: 'Local AI address' },
+  'ai.localModel': { label: 'Local AI model' },
 };
 
 /** A setting shown the way people read it. */

@@ -622,17 +622,40 @@ export interface SettingsVersionDto {
 
 /** What the assistant can do right now. */
 export interface AssistantStatus {
-  /** The local AI model is turned on in Settings. */
-  enabled: boolean;
-  /** The AI server answered. */
-  reachable: boolean;
-  /** The chosen model is downloaded on the AI server. */
-  modelReady: boolean;
+  mode: 'off' | 'online' | 'local';
+  /** Online service id and name, and the model in use. */
+  provider: string;
+  providerName: string;
   model: string;
-  /** Models downloaded on the AI server. */
+  /** An AI can be asked now (key saved, or the local model is downloaded). */
+  ready: boolean;
+  /** Saved online keys by service, shown as "gsk_…9f3a" (never the key itself). */
+  keys: Record<string, string>;
+  /** Only filled in by a connection test or for the local model. */
+  reachable: boolean;
   models: string[];
   /** Why it is not ready, in words. */
   problem: string | null;
+}
+
+/** An answer from "Ask", the assistant on every page. */
+export interface AskAnswer {
+  reply: string;
+  /** built-in: understood without AI; ai: an AI chose what to do (the numbers are still ours). */
+  source: 'built-in' | 'ai';
+  /** Numbers to show as tiles. */
+  facts?: { label: string; value: string; hint?: string }[];
+  table?: { columns: string[]; rows: string[][]; align?: ('left' | 'right')[] };
+  /** Pages to open from the answer. */
+  links?: { label: string; to: string }[];
+  /** Open this page now. */
+  navigate?: string;
+  /** Setting changes to show for approval. */
+  settings?: { path: string; value: string | number | boolean | string[] }[];
+  /** More questions to try. */
+  suggestions?: string[];
+  /** The AI was asked but could not answer (no internet, no key …). */
+  aiProblem?: string;
 }
 
 /* ----------------------------- Backups ----------------------------- */

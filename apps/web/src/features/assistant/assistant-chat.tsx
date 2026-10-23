@@ -24,6 +24,10 @@ export interface AssistantTurn {
   extra?: ReactNode;
   /** Undo what this answer did. */
   undo?: () => void;
+  /** Something to know, e.g. why the online AI could not help this time. */
+  notice?: string;
+  /** Follow-up questions to try. */
+  suggestions?: string[];
 }
 
 interface Message {
@@ -34,17 +38,20 @@ interface Message {
   error?: boolean;
 }
 
-export const useAssistantStatus = () =>
+/** Which AI is on (for people who manage settings; others just use the assistant). */
+export const useAssistantStatus = (enabled = true) =>
   useQuery({
     queryKey: ['assistant-status'],
     queryFn: () => api.get<AssistantStatus>('/assistant/status'),
     staleTime: 60_000,
     retry: false,
+    enabled,
+    meta: { silent: true },
   });
 
 /**
  * A chat with the assistant. Requests in plain words; common ones are answered at once by the
- * built-in assistant, others by the free local AI model when it is turned on.
+ * built-in assistant (also offline), others by the AI chosen in Settings → Assistant.
  */
 export function AssistantChat({
   intro,
@@ -52,23 +59,39 @@ export function AssistantChat({
   send,
   placeholder = 'Type what you want…',
   inputRef,
+  showStatus = true,
+  initialMessage,
 }: {
   intro: string;
   examples: string[];
   send: (message: string) => Promise<AssistantTurn>;
   placeholder?: string;
   inputRef?: React.RefObject<HTMLTextAreaElement | null>;
+  /** Show which AI is on (needs the settings permission). */
+  showStatus?: boolean;
+  /** Ask this at once (e.g. typed in Ctrl+K). */
+  initialMessage?: string;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const nextId = useRef(1);
   const endRef = useRef<HTMLDivElement>(null);
-  const { data: status } = useAssistantStatus();
+  const { data: status } = useAssistantStatus(showStatus);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'nearest' });
   }, [messages, busy]);
+
+  const asked = useRef(false);
+  useEffect(() => {
+    if (initialMessage && !asked.current) {
+      asked.current = true;
+      void ask(initialMessage);
+    }
+    // Only once, when the chat opens with a question.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function ask(message: string) {
     const m = message.trim();
@@ -101,16 +124,16 @@ export function AssistantChat({
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
         <Sparkles className="text-brand size-3.5" />
-        Built-in assistant
-        {status?.enabled && (
+        Built-in assistant (works offline)
+        {showStatus && status && status.mode !== 'off' && (
           <span
             className={cn(
               'ml-auto flex items-center gap-1 rounded-full px-1.5 py-0.5',
-              status.modelReady ? 'bg-success/15 text-success' : 'bg-warning/20 text-amber-700',
+              status.ready ? 'bg-success/15 text-success' : 'bg-warning/20 text-amber-700',
             )}
-            title={status.problem ?? `Free local AI model ${status.model} is ready`}
+            title={status.problem ?? `${status.providerName}: ${status.model}`}
           >
-            <Cpu className="size-3" /> {status.modelReady ? status.model : 'AI not ready'}
+            <Cpu className="size-3" /> {status.ready ? `+ ${status.providerName}` : 'AI not ready'}
           </span>
         )}
       </div>
@@ -164,6 +187,25 @@ export function AssistantChat({
                 </p>
               ))}
               {m.turn?.extra}
+              {m.turn?.notice && (
+                <p className="mt-1.5 flex gap-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+                  <TriangleAlert className="mt-px size-3 shrink-0" /> {m.turn.notice}
+                </p>
+              )}
+              {m.turn?.suggestions && m.turn.suggestions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {m.turn.suggestions.map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => ask(sug)}
+                      className="bg-background hover:border-brand/50 rounded-full border px-2 py-0.5 text-[11px]"
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              )}
               {(m.turn?.undo || m.turn?.source) && (
                 <div className="mt-1.5 flex items-center gap-2">
                   {m.turn.undo && (
@@ -178,7 +220,7 @@ export function AssistantChat({
                   )}
                   {m.turn.source && (
                     <span className="text-muted-foreground ml-auto text-[10px]">
-                      {m.turn.source === 'ai' ? 'Local AI model' : 'Built-in'}
+                      {m.turn.source === 'ai' ? 'AI' : 'Built-in'}
                     </span>
                   )}
                 </div>

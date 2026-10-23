@@ -8,6 +8,7 @@ import {
   Moon,
   ScanSearch,
   Search,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router';
@@ -27,13 +28,19 @@ import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import { searchItems } from '@/features/billing/search';
 import { usePosIndex } from '@/features/billing/use-pos-index';
+import { AskPanel } from '@/features/assistant/ask-panel';
 import { NAV } from './nav';
 
-type Panel = 'palette' | 'help' | 'price';
+type Panel = 'palette' | 'help' | 'price' | 'ask';
 
 /** Open a panel from anywhere (menu items, footer buttons). */
 export function openPanel(panel: Panel | 'lock') {
   window.dispatchEvent(new CustomEvent('pos:panel', { detail: panel }));
+}
+
+/** Open Ask with a question already typed (from Ctrl+K). */
+export function askQuestion(question: string) {
+  window.dispatchEvent(new CustomEvent('pos:ask', { detail: question }));
 }
 
 /** Lock = log out but remember who was working, so the PIN screen opens for them. The bill stays. */
@@ -56,10 +63,12 @@ export function useLock() {
  * Keys that work on every page:
  *   Ctrl+K  go to any page or action      F12     all keyboard shortcuts
  *   Ctrl+I  price check                   Ctrl+L  lock the screen
+ *   Ctrl+J  Ask (the assistant)
  * Also locks the screen after the idle time set in Settings → Billing.
  */
 export function KeyboardLayer() {
   const [panel, setPanel] = useState<Panel | null>(null);
+  const [question, setQuestion] = useState<string | undefined>();
   const lock = useLock();
   const lockRef = useRef(lock);
   useEffect(() => {
@@ -84,6 +93,10 @@ export function KeyboardLayer() {
       } else if (ctrl && k === 'l') {
         e.preventDefault();
         void lockRef.current();
+      } else if (ctrl && k === 'j') {
+        e.preventDefault();
+        setQuestion(undefined);
+        setPanel((p) => (p === 'ask' ? null : 'ask'));
       }
     }
     function onPanel(e: Event) {
@@ -91,11 +104,17 @@ export function KeyboardLayer() {
       if (p === 'lock') void lockRef.current();
       else setPanel(p);
     }
+    function onAsk(e: Event) {
+      setQuestion((e as CustomEvent<string>).detail);
+      setPanel('ask');
+    }
     window.addEventListener('keydown', onKey);
     window.addEventListener('pos:panel', onPanel);
+    window.addEventListener('pos:ask', onAsk);
     return () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('pos:panel', onPanel);
+      window.removeEventListener('pos:ask', onAsk);
     };
   }, []);
 
@@ -121,6 +140,7 @@ export function KeyboardLayer() {
       <CommandPalette open={panel === 'palette'} onClose={close} onPanel={setPanel} />
       <ShortcutsDialog open={panel === 'help'} onClose={close} />
       <PriceCheckDialog open={panel === 'price'} onClose={close} />
+      <AskPanel open={panel === 'ask'} onClose={close} question={question} />
     </>
   );
 }
@@ -196,6 +216,14 @@ function PaletteBody({ onClose, onPanel }: { onClose: () => void; onPanel: (p: P
         run: () => onPanel('help'),
       },
       {
+        id: 'ask',
+        label: 'Ask the assistant',
+        group: 'Actions',
+        icon: Sparkles,
+        keys: 'Ctrl+J',
+        run: () => onPanel('ask'),
+      },
+      {
         id: 'lock',
         label: 'Lock the screen',
         group: 'Actions',
@@ -221,9 +249,23 @@ function PaletteBody({ onClose, onPanel }: { onClose: () => void; onPanel: (p: P
   }, [can, navigate, onPanel, lock, toggle]);
 
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = commands.filter((c) =>
+  const matches = commands.filter((c) =>
     words.every((w) => `${c.label} ${c.group}`.toLowerCase().includes(w)),
   );
+  // Anything typed can also be asked: "best sellers this week", "how do I close the day?"
+  const shown: Command[] =
+    q.trim().length > 2
+      ? [
+          ...matches,
+          {
+            id: 'ask-question',
+            label: `Ask: “${q.trim()}”`,
+            group: 'Ask the assistant',
+            icon: Sparkles,
+            run: () => askQuestion(q.trim()),
+          },
+        ]
+      : matches;
 
   useEffect(() => {
     listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -232,7 +274,7 @@ function PaletteBody({ onClose, onPanel }: { onClose: () => void; onPanel: (p: P
   function run(c: Command | undefined) {
     if (!c) return;
     // Panels replace the palette; pages close it.
-    if (c.id !== 'price' && c.id !== 'help') onClose();
+    if (c.id !== 'price' && c.id !== 'help' && c.id !== 'ask') onClose();
     c.run();
   }
 
@@ -259,7 +301,7 @@ function PaletteBody({ onClose, onPanel }: { onClose: () => void; onPanel: (p: P
               run(shown[active]);
             }
           }}
-          placeholder="Go to a page or do something…"
+          placeholder="Go to a page, do something or ask a question…"
           className="h-14 flex-1 bg-transparent text-base outline-none"
         />
         <kbd className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px]">Esc</kbd>
@@ -312,6 +354,7 @@ const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
       ['Ctrl + K', 'Go to any page or action'],
       ['Ctrl + I', 'Price check (scan or type an item)'],
       ['Ctrl + L', 'Lock the screen (your PIN opens it again)'],
+      ['Ctrl + J', 'Ask: sales, stock, customers, how to …'],
       ['F12', 'This list'],
       ['Enter', 'Confirm a warning / save a form'],
       ['Esc', 'Cancel / close'],

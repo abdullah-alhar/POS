@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RECEIPT_TEMPLATES } from './receipt-layout';
-import { aiSettingsSchema, DEFAULT_SETTINGS, isLocalAiUrl } from './schemas/settings';
+import { isLocalAiUrl, isSafeAiApiUrl } from './ai-providers';
+import { aiSettingsSchema, DEFAULT_SETTINGS } from './schemas/settings';
 import { checkSettings, diffSettings } from './settings-tools';
 
 describe('diffSettings', () => {
@@ -91,10 +92,26 @@ describe('local AI address', () => {
       expect(isLocalAiUrl(bad), bad).toBe(false);
   });
 
+  it('allows https services anywhere but plain http only in the shop', () => {
+    expect(isSafeAiApiUrl('https://api.example.com/v1')).toBe(true);
+    expect(isSafeAiApiUrl('http://192.168.1.9:1234/v1')).toBe(true);
+    expect(isSafeAiApiUrl('http://api.example.com/v1')).toBe(false);
+    expect(isSafeAiApiUrl('https://a.com/../b')).toBe(false);
+  });
+
+  it('needs an address and a model for another service', () => {
+    const custom = { ...DEFAULT_SETTINGS.ai, mode: 'online' as const, provider: 'custom' as const };
+    expect(aiSettingsSchema.safeParse(custom).success).toBe(false);
+    expect(
+      aiSettingsSchema.safeParse({ ...custom, customUrl: 'https://x.example/v1', model: 'm-1' })
+        .success,
+    ).toBe(true);
+  });
+
   it('checks the AI settings', () => {
     expect(aiSettingsSchema.safeParse(DEFAULT_SETTINGS.ai).success).toBe(true);
     expect(
-      aiSettingsSchema.safeParse({ ...DEFAULT_SETTINGS.ai, model: 'qwen; rm -rf /' }).success,
+      aiSettingsSchema.safeParse({ ...DEFAULT_SETTINGS.ai, localModel: 'qwen; rm -rf /' }).success,
     ).toBe(false);
   });
 });

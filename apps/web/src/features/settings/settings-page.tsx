@@ -66,7 +66,7 @@ const PAGES: { id: PageId; label: string; icon: LucideIcon; hint: string }[] = [
   { id: 'tax', label: 'VAT and tax', icon: Percent, hint: 'VAT number, tax rates' },
   { id: 'approvals', label: 'Admin approval', icon: ShieldCheck, hint: 'What needs a PIN' },
   { id: 'look', label: 'Look', icon: Palette, hint: 'Theme, logo, colours' },
-  { id: 'assistant', label: 'Assistant', icon: Cpu, hint: 'Free local AI' },
+  { id: 'assistant', label: 'Assistant', icon: Cpu, hint: 'Free AI: Groq, Gemini …' },
   { id: 'history', label: 'History', icon: History, hint: 'Compare and undo' },
   { id: 'copy', label: 'Copy settings', icon: FileDown, hint: 'Save to / open a file' },
 ];
@@ -123,8 +123,8 @@ const SEARCH: { page: PageId; label: string; words: string }[] = [
   { page: 'look', label: 'Logo and colours', words: 'logo colour color brand branding app name' },
   {
     page: 'assistant',
-    label: 'Free local AI',
-    words: 'ai assistant ollama model qwen local offline',
+    label: 'Free AI (Groq, Gemini …)',
+    words: 'ai assistant groq gemini openrouter mistral key free online ollama model local offline',
   },
   {
     page: 'history',
@@ -395,7 +395,7 @@ function Overview({ settings, onGo }: { settings: AllSettings; onGo: (page: Page
           </CardTitle>
           <CardDescription>
             Change settings in plain words. You see every change before it is saved.
-            {!ai?.enabled && (
+            {(!ai || ai.mode === 'off' || !ai.ready) && (
               <>
                 {' '}
                 <button
@@ -403,9 +403,9 @@ function Overview({ settings, onGo }: { settings: AllSettings; onGo: (page: Page
                   className="text-primary underline-offset-4 hover:underline"
                   onClick={() => onGo('assistant')}
                 >
-                  Turn on the free local AI
+                  Turn on a free AI (Groq)
                 </button>{' '}
-                for any request.
+                for any request; without it the built-in assistant answers.
               </>
             )}
           </CardDescription>
