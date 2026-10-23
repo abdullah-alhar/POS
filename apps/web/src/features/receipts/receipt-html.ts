@@ -2,6 +2,8 @@ import qrcode from 'qrcode-generator';
 import { code128Svg, type ReceiptBlock, type ReceiptDoc } from '@shoppos/shared';
 import { LOGO_MARK, LOGO_VIEWBOX, LOGO_WORDMARK } from '@/components/brand/logo-paths';
 
+const DIVIDER_CLASS = { '-': '', '=': 'double', '.': 'dotted', '*': 'stars' } as const;
+
 const escape = (s: string) =>
   s.replace(
     /[&<>"']/g,
@@ -30,17 +32,25 @@ export function blockHtml(b: ReceiptBlock, logo: string | null): string {
     case 'logo':
       return `<div class="logo">${logo ? `<img src="${logo}" alt="">` : builtInLogoSvg()}</div>`;
     case 'divider':
-      return `<div class="hr${b.char === '=' ? ' double' : ''}"></div>`;
+      return `<div class="hr${b.char ? ` ${DIVIDER_CLASS[b.char]}` : ''}"></div>`;
     case 'feed':
       return `<div style="height:${b.lines * 1.2}em"></div>`;
     case 'barcode':
       return `<div class="bc">${code128Svg(b.value, 44, 1.4)}<div>${escape(b.value)}</div></div>`;
     case 'qr':
-      return `<div class="qr">${qrSvg(b.value)}</div>`;
+      return `<div class="qr ${b.size ?? 'medium'}">${qrSvg(b.value)}</div>`;
     case 'cut':
       return '<div class="cut"></div>';
-    case 'text':
-      return `<div class="${[b.align === 'center' ? 'c' : b.align === 'right' ? 'r' : '', b.bold ? 'b' : '', b.large ? 'l' : ''].join(' ')}">${escape(b.text) || '&nbsp;'}</div>`;
+    case 'text': {
+      const cls = [
+        b.align === 'center' ? 'c' : b.align === 'right' ? 'r' : '',
+        b.bold ? 'b' : '',
+        b.large ? 'l' : b.tall && b.wide ? 'l' : b.tall ? 'tl' : b.wide ? 'wd' : '',
+        b.underline ? 'u' : '',
+      ].join(' ');
+      const body = escape(b.text) || '&nbsp;';
+      return `<div class="${cls}">${b.invert ? `<span class="inv">${body}</span>` : body}</div>`;
+    }
     case 'row':
       return `<div class="row ${b.bold ? 'b' : ''} ${b.large ? 'l' : ''}"><span>${escape(b.left)}</span><span>${escape(b.right)}</span></div>`;
   }
@@ -51,11 +61,16 @@ export function receiptCss(scope = '') {
   const s = scope ? `${scope} ` : '';
   return `
 ${s}.c { text-align: center; } ${s}.r { text-align: right; } ${s}.b { font-weight: 700; } ${s}.l { font-size: 16px; font-weight: 700; }
+${s}.tl { font-size: 15px; line-height: 1.7; font-weight: 600; } ${s}.wd { letter-spacing: 0.3em; font-weight: 600; } ${s}.u { text-decoration: underline; }
+${s}.inv { background: #000; color: #fff; padding: 0 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 ${s}.row { display: flex; justify-content: space-between; gap: 8px; } ${s}.row span:last-child { white-space: nowrap; }
 ${s}.hr { border-top: 1px dashed #000; margin: 4px 0; } ${s}.hr.double { border-top-style: double; border-top-width: 3px; }
+${s}.hr.dotted { border-top: 2px dotted #000; } ${s}.hr.stars { border: 0; height: 1.2em; overflow: hidden; white-space: nowrap; text-align: center; margin: 2px 0; }
+${s}.hr.stars::before { content: '* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *'; }
 ${s}.logo { text-align: center; margin-bottom: 4px; } ${s}.logo img, ${s}.logo svg { max-width: 60%; max-height: 22mm; }
 ${s}.bc { text-align: center; margin: 6px 0 2px; font-size: 11px; } ${s}.bc svg { width: 90%; height: 44px; }
-${s}.qr { text-align: center; margin: 6px 0 2px; } ${s}.qr svg { width: 28mm; height: 28mm; }
+${s}.qr { text-align: center; margin: 6px 0 2px; } ${s}.qr svg { display: block; margin: 0 auto; width: 28mm; height: 28mm; }
+${s}.qr.small svg { width: 20mm; height: 20mm; } ${s}.qr.large svg { width: 36mm; height: 36mm; }
 ${s}.cut { border-top: 1px dashed #999; margin: 8mm 0 4mm; break-after: page; }`;
 }
 

@@ -103,6 +103,63 @@ export const printerSettingsSchema = z.object({
   logo: printerLogoSchema.nullable(),
 });
 
+/**
+ * Is this the address of an AI server on this computer or the shop network? Only such addresses
+ * are allowed, so bills, settings and customer details never leave the shop.
+ */
+export function isLocalAiUrl(url: string): boolean {
+  const m = /^https?:\/\/(\[[0-9a-f:.]+\]|[a-z0-9.-]+)(?::(\d{1,5}))?\/?$/i.exec(url.trim());
+  if (!m) return false;
+  const host = m[1]!.toLowerCase();
+  if (m[2] && Number(m[2]) > 65_535) return false;
+  // Names other than localhost could point anywhere, so the shop network needs the IP address.
+  if (host === 'localhost' || host === '[::1]') return true;
+  const ip = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!ip) return false;
+  const [a, b] = [Number(ip[1]), Number(ip[2])];
+  if ([a, b, Number(ip[3]), Number(ip[4])].some((n) => n > 255)) return false;
+  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
+}
+
+/** The free model suggested for the shop laptop (runs on the CPU, about 3.4 GB). */
+export const AI_DEFAULT_MODEL = 'qwen3.5:4b';
+export const AI_DEFAULT_URL = 'http://127.0.0.1:11434';
+
+/**
+ * The assistant in Settings and the receipt editor. It always understands common requests by
+ * itself; with this on, other requests go to a free AI model running locally through Ollama.
+ */
+export const aiSettingsSchema = z.object({
+  enabled: z.boolean(),
+  url: z
+    .string()
+    .trim()
+    .refine(
+      isLocalAiUrl,
+      'Use an address on this computer or the shop network, e.g. ' + AI_DEFAULT_URL,
+    ),
+  model: z
+    .string()
+    .trim()
+    .min(1, 'Enter the model name')
+    .max(100)
+    .regex(/^[\w.:/-]+$/, 'Use the model name as Ollama shows it, e.g. ' + AI_DEFAULT_MODEL),
+});
+
+/** Receipt designs the shop saved by name in the receipt editor, to switch between later. */
+export const receiptLibrarySchema = z.object({
+  designs: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(40),
+        name: z.string().trim().min(1, 'Give the design a name').max(40),
+        savedAt: z.string().max(40),
+        layout: z.array(receiptElementSchema).max(80),
+      }),
+    )
+    .max(20, 'Up to 20 saved designs'),
+});
+
 export const backupSettingsSchema = z.object({
   /** Daily automatic backup time, 24-hour HH:MM. Empty = no daily backup. */
   dailyAt: z.union([
@@ -128,6 +185,8 @@ export const SETTINGS_SCHEMAS = {
   approvals: approvalSettingsSchema,
   printer: printerSettingsSchema,
   backup: backupSettingsSchema,
+  ai: aiSettingsSchema,
+  receiptLibrary: receiptLibrarySchema,
 } as const;
 
 export type SettingsSection = keyof typeof SETTINGS_SCHEMAS;
@@ -141,6 +200,8 @@ export type PosSettings = z.infer<typeof posSettingsSchema>;
 export type ApprovalSettings = z.infer<typeof approvalSettingsSchema>;
 export type PrinterSettings = z.infer<typeof printerSettingsSchema>;
 export type BackupSettings = z.infer<typeof backupSettingsSchema>;
+export type AiSettings = z.infer<typeof aiSettingsSchema>;
+export type ReceiptLibrary = z.infer<typeof receiptLibrarySchema>;
 
 export interface AllSettings {
   branding: BrandingSettings;
@@ -151,6 +212,8 @@ export interface AllSettings {
   approvals: ApprovalSettings;
   printer: PrinterSettings;
   backup: BackupSettings;
+  ai: AiSettings;
+  receiptLibrary: ReceiptLibrary;
 }
 
 export const DEFAULT_SETTINGS: AllSettings = {
@@ -195,6 +258,8 @@ export const DEFAULT_SETTINGS: AllSettings = {
     logo: null,
   },
   backup: { dailyAt: '21:30', onDayClose: true, keep: 30, usbPath: '', driveUpload: false },
+  ai: { enabled: false, url: AI_DEFAULT_URL, model: AI_DEFAULT_MODEL },
+  receiptLibrary: { designs: [] },
 };
 
 /** Settings anyone can read without logging in (login screen, receipt header). */

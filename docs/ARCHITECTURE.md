@@ -63,7 +63,7 @@ data URL); admins can set photos for others. Photos are kept out of the audit lo
   with the action name. The web app shows a PIN pad; an admin types their PIN (`POST /auth/approve`)
   and gets a 2-minute, single-use token for that one action. The original request is retried with the
   `x-approval-token` header. The audit log records both the cashier and the approving admin. Which
-  actions need approval, and the cashier discount limit, are set in Settings → Approvals.
+  actions need approval, and the cashier discount limit, are set in Settings → Admin approval.
 
 ## Billing speed
 
@@ -100,6 +100,32 @@ The server builds a receipt as printer-independent blocks (`ReceiptDoc`). The sa
 
 The logo is turned into a 1-bit raster in the browser (the printer cannot read PNG/SVG) and saved with
 the printer settings. Other scripts (Sinhala/Tamil) can later be added the same way, as image blocks.
+
+### Receipt Studio, design check and assistant
+
+The receipt design (`receipt-layout.ts`) is a list of pieces. Every piece can also have a layer
+name, `hidden`, `locked` and `when` (print only on some bills: credit, card, quotation …); all are
+optional, so older designs stay valid. `receipt-builder.ts` fills the design in with a bill and
+marks pieces that are hidden or whose condition does not hold as `skipped`, so the editor can show
+them faded while printing leaves them out. `POST /printing/receipt-preview` takes a `scenario`
+(the same bill paid by card, on credit, as a quotation, a reprint …), a `billNumber` and
+`charsPerLine` (58 mm paper) and returns the pieces, the printer text and a paper estimate.
+
+`receipt-tools.ts` has the pure helpers the editor uses: `checkReceipt` (problems with one-click
+fixes), `diffLayouts` (added / removed / changed / moved pieces), `estimateBlocks` and
+`savePaper`. `settings-tools.ts` compares settings in words (`diffSettings`), checks the setup
+(`checkSettings`) and labels every setting. Settings history comes from the audit log
+(`GET /settings/history`), whose summaries now say what changed.
+
+The assistant (`assistant.ts`) turns plain requests into actions from a fixed list
+(`receiptActionSchema`, `ASSISTANT_SETTINGS`). The built-in interpreter understands common
+requests without any AI. `POST /assistant/receipt` and `/assistant/settings` try it first; only
+requests it does not understand go to a free local model through Ollama (`modules/assistant`),
+when the shop turns it on in Settings → Assistant. The model answers with JSON constrained by a
+schema (Ollama structured outputs), every action is validated with Zod, actions are applied by
+the same code as manual edits, setting changes are shown for approval, the AI address must be on
+this computer or the private network (`isLocalAiUrl`, redirects refused), one AI request runs at
+a time and only the design and settings are sent, never bills or customers.
 
 ## Release and database updates
 

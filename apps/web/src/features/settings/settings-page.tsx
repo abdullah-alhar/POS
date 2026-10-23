@@ -1,581 +1,446 @@
-import { useState, type ReactNode } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Monitor, Moon, Plus, Save, Star, Sun, Trash2 } from 'lucide-react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  Controller,
-  useForm,
-  useWatch,
-  type Control,
-  type FieldValues,
-  type Path,
-} from 'react-hook-form';
-import { toast } from 'sonner';
-import {
-  ALL_APPROVAL_ACTIONS,
-  APPROVAL_ACTIONS,
-  bpToPercentText,
-  parsePercent,
-  SETTINGS_SCHEMAS,
-  type AllSettings,
-  type SettingsSection,
-} from '@shoppos/shared';
-import { FormField } from '@/components/form-field';
+  Bot,
+  CircleAlert,
+  Cpu,
+  FileDown,
+  History,
+  Lightbulb,
+  Palette,
+  Percent,
+  Printer,
+  ReceiptText,
+  ScanBarcode,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Store,
+  TriangleAlert,
+  type LucideIcon,
+} from 'lucide-react';
+import { useSearchParams } from 'react-router';
+import { checkSettings, type AllSettings, type SettingsIssue } from '@shoppos/shared';
 import { PageHeader } from '@/components/page-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import { FullScreenLoader } from '@/app/guards';
 import { useCan } from '@/lib/auth';
+import { useSettings } from '@/lib/queries';
+import { cn } from '@/lib/utils';
+import { useAssistantStatus } from '../assistant/assistant-chat';
+import { AiForm } from './ai-form';
 import { BrandingForm } from './branding-form';
 import { PrinterForm } from './printer-form';
-import { ReceiptDesigner } from './receipt-designer';
-import { api } from '@/lib/api';
-import { keys, useSettings, useTaxRates } from '@/lib/queries';
-import { useTheme, type ThemeChoice } from '@/lib/theme';
-import { cn } from '@/lib/utils';
+import { ReceiptCard } from './receipt-card';
+import {
+  AppearanceCard,
+  ApprovalsForm,
+  PosForm,
+  ShopForm,
+  TaxForm,
+  TaxRatesCard,
+} from './section-forms';
+import { SettingsAssistant } from './settings-assistant';
+import { SettingsHistory } from './settings-history';
+import { SettingsTransfer } from './settings-transfer';
+
+type PageId =
+  | 'overview'
+  | 'shop'
+  | 'receipt'
+  | 'printer'
+  | 'billing'
+  | 'tax'
+  | 'approvals'
+  | 'look'
+  | 'assistant'
+  | 'history'
+  | 'copy';
+
+const PAGES: { id: PageId; label: string; icon: LucideIcon; hint: string }[] = [
+  { id: 'overview', label: 'Overview', icon: Sparkles, hint: 'Setup check and assistant' },
+  { id: 'shop', label: 'Shop details', icon: Store, hint: 'Name, address, phone' },
+  { id: 'receipt', label: 'Receipt', icon: ReceiptText, hint: 'Receipt Studio' },
+  { id: 'printer', label: 'Printer', icon: Printer, hint: 'Receipt printer, drawer' },
+  { id: 'billing', label: 'Billing', icon: ScanBarcode, hint: 'Rounding, stock, lock' },
+  { id: 'tax', label: 'VAT and tax', icon: Percent, hint: 'VAT number, tax rates' },
+  { id: 'approvals', label: 'Admin approval', icon: ShieldCheck, hint: 'What needs a PIN' },
+  { id: 'look', label: 'Look', icon: Palette, hint: 'Theme, logo, colours' },
+  { id: 'assistant', label: 'Assistant', icon: Cpu, hint: 'Free local AI' },
+  { id: 'history', label: 'History', icon: History, hint: 'Compare and undo' },
+  { id: 'copy', label: 'Copy settings', icon: FileDown, hint: 'Save to / open a file' },
+];
+
+/** Words people may search for, and the page that has them. */
+const SEARCH: { page: PageId; label: string; words: string }[] = [
+  { page: 'shop', label: 'Shop name', words: 'shop name title business' },
+  {
+    page: 'shop',
+    label: 'Address, phone and email',
+    words: 'address phone telephone email contact',
+  },
+  {
+    page: 'receipt',
+    label: 'Receipt design',
+    words:
+      'receipt bill design layout template logo footer header qr whatsapp barcode thank you studio',
+  },
+  {
+    page: 'receipt',
+    label: 'Copies of every receipt',
+    words: 'copies copy shop copy credit signature',
+  },
+  {
+    page: 'printer',
+    label: 'Receipt printer',
+    words: 'printer usb network thermal chrome print test',
+  },
+  {
+    page: 'printer',
+    label: 'Paper width (58 / 80 mm)',
+    words: 'paper width 58 80 mm characters line',
+  },
+  { page: 'printer', label: 'Cash drawer and paper cut', words: 'drawer cash open kick cut feed' },
+  { page: 'billing', label: 'Rounding', words: 'round rounding nearest cents decimals' },
+  { page: 'billing', label: 'Currency', words: 'currency symbol rs lkr money' },
+  { page: 'billing', label: 'Selling with no stock', words: 'stock zero negative out of stock' },
+  { page: 'billing', label: 'Print after payment', words: 'auto print automatic receipt payment' },
+  { page: 'billing', label: 'Screen lock', words: 'lock idle screen minutes pin' },
+  {
+    page: 'billing',
+    label: 'Wholesale / retail start',
+    words: 'wholesale retail price mode default',
+  },
+  { page: 'tax', label: 'VAT', words: 'vat tax registered number inclusive' },
+  { page: 'tax', label: 'Tax rates', words: 'tax rate percent default' },
+  { page: 'approvals', label: 'Cashier discount limit', words: 'discount cashier limit percent' },
+  {
+    page: 'approvals',
+    label: 'Admin PIN for actions',
+    words: 'admin approval pin void refund price drawer credit',
+  },
+  { page: 'look', label: 'Dark mode', words: 'dark light theme appearance' },
+  { page: 'look', label: 'Logo and colours', words: 'logo colour color brand branding app name' },
+  {
+    page: 'assistant',
+    label: 'Free local AI',
+    words: 'ai assistant ollama model qwen local offline',
+  },
+  {
+    page: 'history',
+    label: 'History and compare',
+    words: 'history compare undo restore version changes audit who',
+  },
+  {
+    page: 'copy',
+    label: 'Save / open settings file',
+    words: 'export import file backup copy transfer second shop',
+  },
+  { page: 'overview', label: 'Setup check', words: 'check health problems overview' },
+];
+
+const ISSUE_PAGE: Record<SettingsIssue['section'], PageId> = {
+  shop: 'shop',
+  receipt: 'receipt',
+  receiptLibrary: 'receipt',
+  tax: 'tax',
+  pos: 'billing',
+  approvals: 'approvals',
+  printer: 'printer',
+  backup: 'copy',
+  branding: 'look',
+  ai: 'assistant',
+};
 
 export function SettingsPage() {
   const { data: settings } = useSettings();
   const canBrand = useCan()('branding.manage');
+  const [params, setParams] = useSearchParams();
+  const page = (PAGES.find((p) => p.id === params.get('s'))?.id ?? 'overview') as PageId;
+  const go = (id: PageId) => setParams(id === 'overview' ? {} : { s: id }, { replace: false });
   if (!settings) return <FullScreenLoader />;
 
   return (
     <>
-      <PageHeader title="Settings" description="Set these once; the shop then runs by itself." />
-      <Tabs defaultValue="shop">
-        <TabsList>
-          <TabsTrigger value="shop">Shop</TabsTrigger>
-          <TabsTrigger value="receipt">Receipt</TabsTrigger>
-          <TabsTrigger value="printer">Printer</TabsTrigger>
-          <TabsTrigger value="rules">Selling rules</TabsTrigger>
-          <TabsTrigger value="look">Look</TabsTrigger>
-        </TabsList>
-        <TabsContent value="shop">
-          <div className="grid items-start gap-5 lg:grid-cols-2">
-            <ShopForm settings={settings} />
-            <div className="grid gap-5">
+      <PageHeader
+        title="Settings"
+        description="Set these once; the shop then runs by itself."
+        actions={<SettingsSearch onGo={go} />}
+      />
+      <div className="grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <nav
+          className="bg-card grid gap-0.5 rounded-xl border p-1.5 lg:sticky lg:top-4"
+          aria-label="Settings sections"
+        >
+          {PAGES.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => go(p.id)}
+              aria-current={page === p.id ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
+                page === p.id
+                  ? 'bg-accent text-accent-foreground font-medium'
+                  : 'hover:bg-muted/70',
+              )}
+            >
+              <p.icon
+                className={cn(
+                  'size-4 shrink-0',
+                  page === p.id ? 'text-brand' : 'text-muted-foreground',
+                )}
+              />
+              <span className="min-w-0">
+                <span className="block truncate">{p.label}</span>
+                <span className="text-muted-foreground block truncate text-[11px] font-normal">
+                  {p.hint}
+                </span>
+              </span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="min-w-0">
+          {page === 'overview' && <Overview settings={settings} onGo={go} />}
+          {page === 'shop' && (
+            <div className="max-w-3xl">
+              <ShopForm settings={settings} />
+            </div>
+          )}
+          {page === 'receipt' && <ReceiptCard settings={settings} />}
+          {page === 'printer' && <PrinterForm settings={settings} />}
+          {page === 'billing' && (
+            <div className="max-w-3xl">
+              <PosForm settings={settings} />
+            </div>
+          )}
+          {page === 'tax' && (
+            <div className="grid max-w-3xl gap-5">
               <TaxForm settings={settings} />
               <TaxRatesCard />
             </div>
-          </div>
-        </TabsContent>
-        <TabsContent value="receipt">
-          <ReceiptDesigner settings={settings} />
-        </TabsContent>
-        <TabsContent value="printer">
-          <PrinterForm settings={settings} />
-        </TabsContent>
-        <TabsContent value="rules">
-          <div className="grid items-start gap-5 xl:grid-cols-2">
-            <PosForm settings={settings} />
-            <ApprovalsForm settings={settings} />
-          </div>
-        </TabsContent>
-        <TabsContent value="look">
-          <div className="grid items-start gap-5">
-            <AppearanceCard />
-            {canBrand && <BrandingForm settings={settings} />}
-          </div>
-        </TabsContent>
-      </Tabs>
+          )}
+          {page === 'approvals' && (
+            <div className="max-w-3xl">
+              <ApprovalsForm settings={settings} />
+            </div>
+          )}
+          {page === 'look' && (
+            <div className="grid gap-5">
+              <div className="max-w-3xl">
+                <AppearanceCard />
+              </div>
+              {canBrand && <BrandingForm settings={settings} />}
+            </div>
+          )}
+          {page === 'assistant' && (
+            <div className="max-w-3xl">
+              <AiForm settings={settings} />
+            </div>
+          )}
+          {page === 'history' && <SettingsHistory settings={settings} />}
+          {page === 'copy' && (
+            <div className="max-w-3xl">
+              <SettingsTransfer settings={settings} />
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 }
 
-/** One form per settings section, validated with the same Zod schema the server uses. */
-function useSectionForm<K extends SettingsSection>(section: K, settings: AllSettings) {
-  const qc = useQueryClient();
-  const form = useForm<AllSettings[K]>({
-    resolver: zodResolver(SETTINGS_SCHEMAS[section] as never),
-    defaultValues: settings[section] as never,
-  });
-  const save = useMutation({
-    mutationFn: (value: AllSettings[K]) => api.put<AllSettings[K]>(`/settings/${section}`, value),
-    onSuccess: (value) => {
-      qc.setQueryData<AllSettings>(keys.settings, (old) =>
-        old ? { ...old, [section]: value } : old,
-      );
-      qc.invalidateQueries({ queryKey: keys.publicSettings });
-      qc.invalidateQueries({ queryKey: keys.posIndex });
-      form.reset(value as never);
-      toast.success('Settings saved');
-    },
-  });
-  return { form, save, submit: form.handleSubmit((v) => save.mutate(v as AllSettings[K])) };
-}
-
-function SectionCard({
-  title,
-  description,
-  onSubmit,
-  saving,
-  dirty,
-  children,
-  className,
-}: {
-  title: string;
-  description?: string;
-  onSubmit: () => void;
-  saving: boolean;
-  dirty: boolean;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <Card className={className}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit();
-        }}
-        className="grid gap-5"
-      >
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          {description && <CardDescription>{description}</CardDescription>}
-        </CardHeader>
-        <CardContent className="grid gap-4">{children}</CardContent>
-        <div className="flex justify-end px-5">
-          <Button type="submit" disabled={saving || !dirty}>
-            {saving ? <Loader2 className="animate-spin" /> : <Save />} Save
-          </Button>
-        </div>
-      </form>
-    </Card>
-  );
-}
-
-function SwitchRow<T extends FieldValues>({
-  control,
-  name,
-  label,
-  hint,
-}: {
-  control: Control<T>;
-  name: Path<T>;
-  label: string;
-  hint?: string;
-}) {
-  return (
-    <Controller
-      control={control}
-      name={name}
-      render={({ field }) => (
-        <div className="flex items-start justify-between gap-6 rounded-lg border p-3">
-          <div>
-            <Label htmlFor={name}>{label}</Label>
-            {hint && <p className="text-muted-foreground mt-1 text-xs">{hint}</p>}
-          </div>
-          <Switch id={name} checked={!!field.value} onCheckedChange={field.onChange} />
-        </div>
-      )}
-    />
-  );
-}
-
-// ── Shop ──
-
-function ShopForm({ settings }: { settings: AllSettings }) {
-  const { form, save, submit } = useSectionForm('shop', settings);
-  const e = form.formState.errors;
-  return (
-    <SectionCard
-      title="Shop details"
-      description="Printed on receipts and reports."
-      onSubmit={submit}
-      saving={save.isPending}
-      dirty={form.formState.isDirty}
-      className="max-w-3xl"
-    >
-      <div className="grid gap-4">
-        <FormField label="Shop name" error={e.name?.message} hint="Printed at the top of receipts">
-          <Input {...form.register('name')} />
-        </FormField>
-        <FormField label="Address" error={e.address?.message}>
-          <Textarea rows={2} {...form.register('address')} />
-        </FormField>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="Phone" error={e.phone?.message}>
-            <Input {...form.register('phone')} />
-          </FormField>
-          <FormField label="Email" error={e.email?.message}>
-            <Input type="email" {...form.register('email')} />
-          </FormField>
-        </div>
-      </div>
-    </SectionCard>
-  );
-}
-
-// ── Receipt ──
-
-// ── Tax ──
-
-function TaxForm({ settings }: { settings: AllSettings }) {
-  const { form, save, submit } = useSectionForm('tax', settings);
-  const registered = useWatch({ control: form.control, name: 'vatRegistered' });
-  return (
-    <SectionCard
-      title="VAT"
-      description="Default is no tax. Turn this on if the shop registers for VAT."
-      onSubmit={submit}
-      saving={save.isPending}
-      dirty={form.formState.isDirty}
-    >
-      <SwitchRow
-        control={form.control}
-        name="vatRegistered"
-        label="The shop is VAT registered"
-        hint="When off, no tax is worked out on bills."
-      />
-      {registered && (
-        <>
-          <FormField label="VAT number" error={form.formState.errors.vatNumber?.message}>
-            <Input {...form.register('vatNumber')} />
-          </FormField>
-          <SwitchRow
-            control={form.control}
-            name="pricesIncludeTax"
-            label="Shelf prices include VAT"
-            hint="Recommended. VAT is taken out of the price instead of added on top."
-          />
-          <SwitchRow
-            control={form.control}
-            name="showTaxOnReceipt"
-            label="Show VAT on the receipt"
-          />
-        </>
-      )}
-    </SectionCard>
-  );
-}
-
-function TaxRatesCard() {
-  const qc = useQueryClient();
-  const { data: rates = [] } = useTaxRates();
-  const [name, setName] = useState('');
-  const [rate, setRate] = useState('');
-  const refresh = () => {
-    qc.invalidateQueries({ queryKey: keys.taxRates });
-    qc.invalidateQueries({ queryKey: keys.posIndex });
+/** "Rounding" → Billing. Type to find any setting. */
+function SettingsSearch({ onGo }: { onGo: (page: PageId) => void }) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const results = useMemo(() => {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    return SEARCH.filter((s) =>
+      words.every((w) => `${s.label} ${s.words}`.toLowerCase().includes(w)),
+    ).slice(0, 8);
+  }, [q]);
+  const pick = (page: PageId) => {
+    onGo(page);
+    setQ('');
+    setOpen(false);
+    inputRef.current?.blur();
   };
-  const create = useMutation({
-    mutationFn: () =>
-      api.post('/tax-rates', { name, rateBp: parsePercent(rate), isDefault: false }),
-    onSuccess: () => {
-      setName('');
-      setRate('');
-      refresh();
-      toast.success('Tax rate added');
-    },
-  });
-  const makeDefault = useMutation({
-    mutationFn: (r: (typeof rates)[number]) =>
-      api.patch(`/tax-rates/${r.id}`, { name: r.name, rateBp: r.rateBp, isDefault: true }),
-    onSuccess: refresh,
-  });
-  const remove = useMutation({
-    mutationFn: (id: string) => api.delete(`/tax-rates/${id}`),
-    onSuccess: refresh,
-  });
-  const rateBp = parsePercent(rate);
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tax rates</CardTitle>
-        <CardDescription>
-          The default rate is used for products that do not choose one.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <ul className="divide-y rounded-lg border">
-          {rates.map((r) => (
-            <li key={r.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-              <span className="flex-1 font-medium">{r.name}</span>
-              <span className="text-muted-foreground tabular-nums">
-                {bpToPercentText(r.rateBp)}%
-              </span>
-              {r.isDefault ? (
-                <Badge>Default</Badge>
-              ) : (
-                <>
-                  <Button size="sm" variant="ghost" onClick={() => makeDefault.mutate(r)}>
-                    <Star /> Make default
-                  </Button>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    onClick={() => remove.mutate(r.id)}
-                    aria-label={`Delete ${r.name}`}
-                  >
-                    <Trash2 />
-                  </Button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
+    <div className="relative w-72">
+      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+      <input
+        ref={inputRef}
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setOpen(true);
+          setActive(0);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') {
             e.preventDefault();
-            create.mutate();
-          }}
-        >
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name, e.g. VAT 18%"
-          />
-          <div className="relative w-28 shrink-0">
-            <Input
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              placeholder="18"
-              inputMode="decimal"
-              className="pr-7 text-right"
-            />
-            <span className="text-muted-foreground absolute inset-y-0 right-3 flex items-center text-sm">
-              %
-            </span>
-          </div>
-          <Button
-            type="submit"
-            disabled={
-              !name.trim() || rateBp === null || rateBp < 0 || rateBp > 10_000 || create.isPending
-            }
-          >
-            <Plus /> Add
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            setActive((a) => Math.min(results.length - 1, a + 1));
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActive((a) => Math.max(0, a - 1));
+          } else if (e.key === 'Enter' && results[active]) {
+            pick(results[active]!.page);
+          } else if (e.key === 'Escape') {
+            setOpen(false);
+          }
+        }}
+        placeholder="Search settings, e.g. rounding"
+        className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/40 h-10 w-full rounded-md border pr-3 pl-9 text-sm outline-none focus-visible:ring-[3px]"
+      />
+      {open && q.trim() && (
+        <ul className="bg-popover absolute inset-x-0 top-11 z-30 overflow-hidden rounded-lg border shadow-lg">
+          {results.length === 0 ? (
+            <li className="text-muted-foreground px-3 py-2 text-sm">
+              Nothing found. Try the assistant on Overview.
+            </li>
+          ) : (
+            results.map((r, i) => {
+              const page = PAGES.find((p) => p.id === r.page)!;
+              return (
+                <li key={`${r.page}-${r.label}`}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pick(r.page)}
+                    className={cn(
+                      'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
+                      i === active ? 'bg-accent' : 'hover:bg-muted',
+                    )}
+                  >
+                    <page.icon className="text-muted-foreground size-4" />
+                    <span className="flex-1">{r.label}</span>
+                    <span className="text-muted-foreground text-xs">{page.label}</span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+    </div>
   );
 }
 
-// ── Billing behaviour ──
+const LEVEL: Record<SettingsIssue['level'], { icon: LucideIcon; className: string }> = {
+  error: { icon: CircleAlert, className: 'text-destructive' },
+  warning: { icon: TriangleAlert, className: 'text-amber-600' },
+  tip: { icon: Lightbulb, className: 'text-sky-600' },
+};
 
-function PosForm({ settings }: { settings: AllSettings }) {
-  const { form, save, submit } = useSectionForm('pos', settings);
+/** The start page of Settings: what to fix, and the assistant to change things in plain words. */
+function Overview({ settings, onGo }: { settings: AllSettings; onGo: (page: PageId) => void }) {
+  const issues = checkSettings(settings);
+  const { data: ai } = useAssistantStatus();
   return (
-    <SectionCard
-      title="Billing"
-      description="How prices are shown and rounded."
-      onSubmit={submit}
-      saving={save.isPending}
-      dirty={form.formState.isDirty}
-      className="max-w-3xl"
-    >
-      <div className="grid grid-cols-3 gap-4">
-        <FormField label="Currency symbol" error={form.formState.errors.currencySymbol?.message}>
-          <Input {...form.register('currencySymbol')} />
-        </FormField>
-        <Controller
-          control={form.control}
-          name="roundingStep"
-          render={({ field }) => (
-            <FormField label="Round bill totals to" hint="Discounts are rounded the same way">
-              <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">No rounding (cents)</SelectItem>
-                  <SelectItem value="100">Nearest Rs 1</SelectItem>
-                  <SelectItem value="500">Nearest Rs 5</SelectItem>
-                  <SelectItem value="1000">Nearest Rs 10</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormField>
-          )}
-        />
-        <Controller
-          control={form.control}
-          name="defaultPriceMode"
-          render={({ field }) => (
-            <FormField label="New bills start in">
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RETAIL">Retail prices</SelectItem>
-                  <SelectItem value="WHOLESALE">Wholesale prices</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormField>
-          )}
-        />
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid gap-5">
+        <Card>
+          <CardHeader>
+            <CardTitle>Setup check</CardTitle>
+            <CardDescription>
+              {issues.length
+                ? 'A few things worth a look. Each one opens the right page.'
+                : 'Everything important is set up.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {issues.length === 0 ? (
+              <p className="text-success flex items-center gap-2 text-sm font-medium">
+                <ShieldCheck className="size-5" /> No problems found.
+              </p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {issues.map((i) => {
+                  const L = LEVEL[i.level];
+                  return (
+                    <li key={i.id} className="flex items-start gap-3 px-3 py-2.5">
+                      <L.icon className={cn('mt-0.5 size-4 shrink-0', L.className)} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{i.title}</p>
+                        <p className="text-muted-foreground text-xs">{i.detail}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onGo(ISSUE_PAGE[i.section])}
+                      >
+                        Fix
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+        <ReceiptCard settings={settings} />
+        <QuickLinks onGo={onGo} />
       </div>
-      <SwitchRow
-        control={form.control}
-        name="showCents"
-        label="Show cents"
-        hint="Off: prices show as Rs 1,250. Amounts are always stored exactly."
-      />
-      <SwitchRow
-        control={form.control}
-        name="allowZeroStockSale"
-        label="Allow selling items with no stock"
-        hint="The cashier sees a warning, and the sale is written in the audit log."
-      />
-      <SwitchRow
-        control={form.control}
-        name="autoPrintReceipt"
-        label="Print the receipt automatically after payment"
-      />
-      <SwitchRow
-        control={form.control}
-        name="confirmRemoveItem"
-        label="Ask before removing an item from the bill"
-        hint="Delete or Backspace removes the selected item; Enter confirms."
-      />
-      <Controller
-        control={form.control}
-        name="autoLockMinutes"
-        render={({ field }) => (
-          <FormField
-            label="Lock the screen when nobody uses it for"
-            hint="Unlock with your PIN. The bill on the screen is kept."
-          >
-            <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
-              <SelectTrigger className="w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Never</SelectItem>
-                {[2, 5, 10, 15, 30, 60].map((m) => (
-                  <SelectItem key={m} value={String(m)}>
-                    {m} minutes
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        )}
-      />
-    </SectionCard>
+      <Card className="xl:sticky xl:top-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="text-brand size-5" /> Assistant
+          </CardTitle>
+          <CardDescription>
+            Change settings in plain words. You see every change before it is saved.
+            {!ai?.enabled && (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  className="text-primary underline-offset-4 hover:underline"
+                  onClick={() => onGo('assistant')}
+                >
+                  Turn on the free local AI
+                </button>{' '}
+                for any request.
+              </>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[480px] flex-col">
+          <SettingsAssistant />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
-// ── Approvals ──
-
-function ApprovalsForm({ settings }: { settings: AllSettings }) {
-  const { form, save, submit } = useSectionForm('approvals', settings);
-  const [discountText, setDiscountText] = useState(
-    bpToPercentText(settings.approvals.cashierMaxDiscountBp),
-  );
-
-  return (
-    <SectionCard
-      title="Admin approval"
-      description="Cashiers need an admin to type their PIN for these actions. Admins never need approval."
-      onSubmit={submit}
-      saving={save.isPending}
-      dirty={form.formState.isDirty}
-      className="max-w-3xl"
-    >
-      <Controller
-        control={form.control}
-        name="cashierMaxDiscountBp"
-        render={({ field, fieldState }) => (
-          <FormField
-            label="Cashiers can give discounts up to"
-            error={fieldState.error?.message}
-            hint="Bigger discounts need an admin PIN"
-          >
-            <div className="relative w-32">
-              <Input
-                value={discountText}
-                inputMode="decimal"
-                className="pr-7 text-right"
-                onChange={(e) => {
-                  setDiscountText(e.target.value);
-                  field.onChange(parsePercent(e.target.value) ?? Number.NaN);
-                }}
-              />
-              <span className="text-muted-foreground absolute inset-y-0 right-3 flex items-center text-sm">
-                %
-              </span>
-            </div>
-          </FormField>
-        )}
-      />
-      <Controller
-        control={form.control}
-        name="requireApprovalFor"
-        render={({ field }) => (
-          <fieldset className="grid gap-2">
-            <legend className="mb-2 text-sm font-medium">Ask for an admin PIN to</legend>
-            <div className="grid gap-2.5 rounded-lg border p-3 sm:grid-cols-2">
-              {ALL_APPROVAL_ACTIONS.map((a) => (
-                <label key={a} className="flex items-center gap-2.5 text-sm">
-                  <Checkbox
-                    checked={field.value.includes(a)}
-                    onCheckedChange={(checked) =>
-                      field.onChange(
-                        checked ? [...field.value, a] : field.value.filter((x) => x !== a),
-                      )
-                    }
-                  />
-                  {APPROVAL_ACTIONS[a]}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
-      />
-    </SectionCard>
-  );
-}
-
-// ── Appearance (this computer only) ──
-
-function AppearanceCard() {
-  const { theme, setTheme } = useTheme();
-  const options: { value: ThemeChoice; label: string; icon: typeof Sun }[] = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'Follow Windows', icon: Monitor },
+function QuickLinks({ onGo }: { onGo: (page: PageId) => void }) {
+  const links: [PageId, string, ReactNode][] = [
+    ['printer', 'Test the printer', 'Print a test page and open the drawer'],
+    ['history', 'See what changed', 'Who changed which setting, compare and undo'],
+    ['copy', 'Copy settings', 'Save them to a file or take them from another shop'],
   ];
   return (
-    <Card className="max-w-3xl">
-      <CardHeader>
-        <CardTitle>Appearance</CardTitle>
-        <CardDescription>Saved on this computer only.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid grid-cols-3 gap-3">
-        {options.map((o) => (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {links.map(([id, title, text]) => {
+        const page = PAGES.find((p) => p.id === id)!;
+        return (
           <button
-            key={o.value}
-            onClick={() => setTheme(o.value)}
-            className={cn(
-              'flex flex-col items-center gap-2 rounded-lg border p-4 text-sm font-medium transition-colors',
-              theme === o.value
-                ? 'border-primary bg-primary/5 ring-primary ring-1'
-                : 'hover:bg-accent/50',
-            )}
+            key={id}
+            type="button"
+            onClick={() => onGo(id)}
+            className="bg-card hover:border-brand/50 grid gap-1 rounded-xl border p-4 text-left transition-colors"
           >
-            <o.icon className="size-5" />
-            {o.label}
+            <page.icon className="text-brand size-5" />
+            <span className="font-medium">{title}</span>
+            <span className="text-muted-foreground text-xs">{text}</span>
           </button>
-        ))}
-      </CardContent>
-    </Card>
+        );
+      })}
+    </div>
   );
 }

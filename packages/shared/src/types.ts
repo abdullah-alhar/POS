@@ -18,6 +18,10 @@ export const ERROR_CODES = [
   /** A backup is being restored; try again in a minute. */
   'MAINTENANCE',
   'BACKUP_FAILED',
+  /** The local AI model is off, not running or not downloaded. */
+  'AI_UNAVAILABLE',
+  /** The assistant is still answering the previous question. */
+  'BUSY',
   'BAD_REQUEST',
   'INTERNAL',
 ] as const;
@@ -602,6 +606,33 @@ export interface AuditEntryDto {
   before: unknown;
   after: unknown;
   meta: unknown;
+}
+
+/** One saved change of a settings section (from the audit log), to compare or restore. */
+export interface SettingsVersionDto {
+  id: string;
+  createdAt: string;
+  userName: string | null;
+  section: string;
+  summary: string | null;
+  /** The section before and after this change. Logos are stored as "[image]". */
+  before: unknown;
+  after: unknown;
+}
+
+/** What the assistant can do right now. */
+export interface AssistantStatus {
+  /** The local AI model is turned on in Settings. */
+  enabled: boolean;
+  /** The AI server answered. */
+  reachable: boolean;
+  /** The chosen model is downloaded on the AI server. */
+  modelReady: boolean;
+  model: string;
+  /** Models downloaded on the AI server. */
+  models: string[];
+  /** Why it is not ready, in words. */
+  problem: string | null;
 }
 
 /* ----------------------------- Backups ----------------------------- */

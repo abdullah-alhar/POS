@@ -55,7 +55,7 @@ You can split a bill, for example part card and part cash.
 
 Cashiers need your PIN for big discounts, price changes, voiding a bill, refunds, taking cash out,
 opening the drawer and selling above a customer's credit limit. You can change these rules in
-**Settings → Selling rules**.
+**Settings → Admin approval**.
 
 ### Evening: close the day
 
@@ -89,26 +89,74 @@ put back in stock). Choose how the money is given back.
 - **Products → Stock**: items running low, the history of every item, and stock counts (adjustments).
 - **Products → Barcode labels**: print sticker sheets for items without a barcode.
 
-## Designing the receipt
+## Designing the receipt (Receipt Studio)
 
-**Settings → Receipt** shows the receipt on paper, filled in with your latest bill. Change it like
-a picture in Canva:
+**Settings → Receipt → Open the Receipt Studio** opens the receipt full screen, filled in with your
+latest bill. It works like a photo editor, but every button says what it does:
 
-- **Click** a piece to select it. A small toolbar appears next to it: move up, move down, copy, bin.
-- **Drag** a piece up or down to move it. (Receipt printers print from top to bottom, so pieces
-  go above or below each other.)
-- **Double-click** a text to type on the paper. Enter finishes.
-- **Add** pieces from the left: Text, Logo, Line, Space, Items, Total, Payment, Item count, You
-  saved, Bill barcode, QR code. Click to add under the selected piece, or drag it onto the paper.
-- On the right, change the selected piece: alignment, **bold**, **Big** letters, or insert
-  fields from the bill (shop name, bill number, date, cashier, customer …). A line whose fields
-  are empty (for example "Customer: …" when there is no customer) is left out.
-- **Delete** removes the selected piece, **Ctrl + Z** undoes, **Ctrl + Y** redoes.
-- **Start from** Classic, Compact or Minimal to begin again.
-- With nothing selected, choose **copies** (1–3) and the **shop copy** with a signature line for
-  credit sales.
+- **Left: Add and Layers.** Click a piece (Text, Two columns, Logo, Line, Space, Items, Total,
+  Payment, Item count, You saved, Bill barcode, QR code, Signature) to add it under the selected
+  piece, or drag it onto the paper. **Layers** lists every piece from top to bottom: the **eye**
+  hides a piece (it stays in the design but is not printed), the **lock** stops it being changed
+  by accident, drag a layer to move it, double-click to give it a name.
+- **Middle: the paper.** Click a piece to select it; **Ctrl + click** or **Shift + click** selects
+  more. Drag to move, double-click a text to type on the paper. **Zoom** with − and +.
+  **80 mm / 58 mm** shows the receipt on either paper. **Printer view** shows exactly what the
+  receipt printer prints. **Compare** puts the saved receipt next to yours, with changes outlined
+  (green added, amber changed, blue moved, red removed).
+- **Show with**: try the design on the latest bill, a sample, or the same bill paid by card, sold
+  on credit (with the shop copy), as a quotation or a reprint. Type a bill number to use that bill.
+- **Right: the selected piece.** Text: alignment, **bold**, underline, **white on black**, and
+  sizes Normal, Tall, Wide and Big. Insert fields from the bill (shop name, bill number, date,
+  time, cashier, customer, total, paid by, bill note …). A line whose fields are empty (for example
+  "Customer: …" with no customer) is left out. **Print this piece when** prints a piece only on some
+  bills, for example "Please pay within 30 days" only on credit sales.
+- **Assistant**: type what you want in plain words, for example "make the total big", "add
+  WhatsApp 0771234567", "add "No returns after 7 days" at the bottom", "save paper", "use the
+  modern design" or "check my receipt". Each answer can be undone with one click.
+- **Check** looks for mistakes (no total, no bill number for returns, an empty QR code, text too
+  long for big letters, two lines in a row …) and fixes most of them with one click.
+- **History**: every change is a step; click one to go back to it. **Saved versions** keeps each
+  saved receipt, to compare with now or bring back.
+- **Designs**: start from Classic, Compact, Minimal, Modern or Tax invoice, or save your own
+  designs by name (for example "Normal" and "Eid sale") and switch between them. **⋯** saves the
+  design to a file or opens one, and has **Find and replace** (Ctrl + H) to change words
+  everywhere at once, such as a new phone number.
 
-Press **Test print**, then **Save**. New bills print like this.
+Keys: **Ctrl + Z / Ctrl + Y** undo and redo, **Delete** removes, **Ctrl + D** duplicates,
+**Ctrl + C / Ctrl + V** copy and paste pieces, **Alt + ↑ / ↓** moves, **Ctrl + E** hides, **/** asks
+the assistant, **?** lists every key.
+
+Press **Test print**, then **Save** (Ctrl + S). If the check found a real problem, you are asked
+first. New bills print like this. Leaving with unsaved changes asks before throwing them away.
+
+## Settings made easy
+
+- **Overview** (the first page of Settings) lists anything worth fixing, each with a **Fix**
+  button, and has the **assistant**: type "round bill totals to the nearest Rs 10", "cashiers can
+  give up to 15% discount" or "lock the screen after 5 minutes". It shows each change as _Now_ and
+  _New_; nothing is saved until you press **Save these changes**.
+- **Search** (top right) finds any setting by its name, for example "rounding" or "drawer".
+- On every page, **Compare** shows what you changed but did not save yet, **Undo changes** throws
+  them away and **Defaults** puts back the values a new shop starts with.
+- **History** lists every saved change, who made it and when. **See change**, **Compare with now**,
+  or **Undo** to bring the earlier settings back.
+- **Copy settings** saves all settings to a file, or opens one (for example from your other shop).
+  You see what is different and tick what to take over.
+
+### Free local AI (optional)
+
+The assistant understands common requests by itself, instantly and without internet. To let it
+handle anything else, use a free AI model that runs on the shop laptop:
+
+1. Install **Ollama** free from ollama.com.
+2. Open a Command Prompt and run `ollama pull qwen3.5:4b` (about 3.4 GB, once). On a slow laptop
+   use a smaller model, for example `llama3.2:3b`.
+3. **Settings → Assistant**: press **Test**, turn on **Use the local AI model** and **Save**.
+
+It is private: the AI runs on your computer (or another computer in the shop; internet addresses
+are refused), it only sees the receipt design and settings (never bills or customers), it can
+only choose from the same safe actions as the editor, and you approve every setting change.
 
 ## Expenses
 
@@ -154,7 +202,7 @@ drive").
 - **Settings → Users**: add a cashier with a PIN, and tick what they may do.
 - Everyone can change their own password and PIN under their name (bottom left) **→ Change my
   password / Change my PIN**.
-- **Settings → Selling rules → Lock the screen when nobody uses it for**: the till locks itself after a
+- **Settings → Billing → Lock the screen when nobody uses it for**: the till locks itself after a
   few minutes, so nobody can use your login while you are away.
 - **Settings → Audit log** shows every important action and who did it, for example voids, price changes,
   refunds, logins and setting changes. Nobody can change or delete it.

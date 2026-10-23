@@ -18,10 +18,20 @@ export interface EscPosOptions {
 
 /** A receipt laid out into printable lines (shared by the byte encoder and the text preview). */
 type Op =
-  | { kind: 'line'; text: string; align: ReceiptAlign; bold: boolean; large: boolean }
+  | {
+      kind: 'line';
+      text: string;
+      align: ReceiptAlign;
+      bold: boolean;
+      large: boolean;
+      tall?: boolean;
+      wide?: boolean;
+      underline?: boolean;
+      invert?: boolean;
+    }
   | { kind: 'logo' }
   | { kind: 'barcode'; value: string }
-  | { kind: 'qr'; value: string }
+  | { kind: 'qr'; value: string; size?: 'small' | 'medium' | 'large' }
   | { kind: 'feed'; lines: number }
   | { kind: 'cut' };
 
@@ -90,7 +100,7 @@ export function layout(doc: ReceiptDoc, charsPerLine: number): Op[] {
         break;
       case 'qr':
         // QR codes carry UTF-8, so links and text with symbols stay intact.
-        if (block.value) ops.push({ kind: 'qr', value: block.value });
+        if (block.value) ops.push({ kind: 'qr', value: block.value, size: block.size });
         break;
       case 'cut':
         ops.push({ kind: 'cut' });
@@ -106,9 +116,22 @@ export function layout(doc: ReceiptDoc, charsPerLine: number): Op[] {
         break;
       case 'text': {
         const large = !!block.large;
-        const width = large ? Math.floor(charsPerLine / 2) : charsPerLine;
+        const width = large || block.wide ? Math.floor(charsPerLine / 2) : charsPerLine;
+        const style = {
+          ...(block.tall && { tall: true }),
+          ...(block.wide && { wide: true }),
+          ...(block.underline && { underline: true }),
+          ...(block.invert && { invert: true }),
+        };
         for (const text of wrap(toPrintable(block.text), width)) {
-          ops.push({ kind: 'line', text, align: block.align ?? 'left', bold: !!block.bold, large });
+          ops.push({
+            kind: 'line',
+            text,
+            align: block.align ?? 'left',
+            bold: !!block.bold,
+            large,
+            ...style,
+          });
         }
         break;
       }
@@ -161,14 +184,14 @@ export function renderText(doc: ReceiptDoc, charsPerLine: number): string {
         case 'feed':
           return '\n'.repeat(Math.max(0, op.lines - 1));
         case 'line': {
-          const width = op.large ? Math.floor(charsPerLine / 2) : charsPerLine;
+          const width = op.large || op.wide ? Math.floor(charsPerLine / 2) : charsPerLine;
           const text =
             op.align === 'center'
               ? op.text.padStart(Math.floor((width + op.text.length) / 2))
               : op.align === 'right'
                 ? op.text.padStart(width)
                 : op.text;
-          return op.large ? text.toUpperCase() : text;
+          return op.large || op.wide ? text.toUpperCase() : text;
         }
       }
     })
@@ -191,6 +214,10 @@ class Bytes {
 }
 
 const ALIGN: Record<ReceiptAlign, number> = { left: 0, center: 1, right: 2 };
+/** QR dot size for each QR size in the receipt design. */
+const QR_MODULE = { small: 4, medium: 6, large: 8 } as const;
+/** Bold, size, underline and white-on-black off. */
+const RESET_STYLE = [ESC, 0x45, 0, GS, 0x21, 0, ESC, 0x2d, 0, GS, 0x42, 0];
 
 /** ESC p: pulse the cash drawer connected to the printer (both common pins). */
 export function drawerKick(): Buffer {
@@ -241,7 +268,7 @@ export function encodeReceipt(doc: ReceiptDoc, opts: EscPosOptions): Buffer {
         const len = data.length + 3;
         out.push(ESC, 0x61, 1);
         out.push(GS, 0x28, 0x6b, 4, 0, 0x31, 0x41, 0x32, 0);
-        out.push(GS, 0x28, 0x6b, 3, 0, 0x31, 0x43, 6);
+        out.push(GS, 0x28, 0x6b, 3, 0, 0x31, 0x43, QR_MODULE[op.size ?? 'medium']);
         out.push(GS, 0x28, 0x6b, 3, 0, 0x31, 0x45, 0x31);
         out.push(GS, 0x28, 0x6b, len & 0xff, len >> 8, 0x31, 0x50, 0x30, ...data);
         out.push(GS, 0x28, 0x6b, 3, 0, 0x31, 0x51, 0x30);
@@ -249,7 +276,7 @@ export function encodeReceipt(doc: ReceiptDoc, opts: EscPosOptions): Buffer {
         break;
       }
       case 'cut':
-        out.push(ESC, 0x45, 0, GS, 0x21, 0, ESC, 0x61, 0);
+        out.push(...RESET_STYLE, ESC, 0x61, 0);
         out.push(ESC, 0x64, Math.min(opts.feedLines, 10));
         if (opts.autoCut) out.push(GS, 0x56, 66, 0);
         else out.push(ESC, 0x64, 2);
@@ -257,13 +284,15 @@ export function encodeReceipt(doc: ReceiptDoc, opts: EscPosOptions): Buffer {
       case 'line':
         out.push(ESC, 0x61, ALIGN[op.align]);
         out.push(ESC, 0x45, op.bold ? 1 : 0);
-        out.push(GS, 0x21, op.large ? 0x11 : 0x00);
+        out.push(GS, 0x21, op.large ? 0x11 : (op.wide ? 0x10 : 0) | (op.tall ? 0x01 : 0));
+        out.push(ESC, 0x2d, op.underline ? 1 : 0);
+        out.push(GS, 0x42, op.invert ? 1 : 0);
         out.text(op.text).push(0x0a);
         break;
     }
   }
 
-  out.push(ESC, 0x45, 0, GS, 0x21, 0, ESC, 0x61, 0);
+  out.push(...RESET_STYLE, ESC, 0x61, 0);
   out.push(ESC, 0x64, Math.min(opts.feedLines, 10));
   if (opts.autoCut) out.push(GS, 0x56, 66, 0); // feed and partial cut
   return out.buffer();

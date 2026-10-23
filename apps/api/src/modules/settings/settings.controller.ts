@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, Query } from '@nestjs/common';
 import {
   hasPermission,
   SECTION_PERMISSION,
@@ -7,7 +7,7 @@ import {
   type SettingsSection,
 } from '@shoppos/shared';
 import { badRequest, forbidden } from '../../common/app-exception';
-import { CurrentActor, Public, type Actor } from '../../common/decorators';
+import { CurrentActor, Public, RequirePermissions, type Actor } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { SettingsService } from './settings.service';
 
@@ -24,6 +24,17 @@ export class SettingsController {
   @Get('public')
   publicSettings() {
     return this.settings.public();
+  }
+
+  /** Earlier versions (from the audit log), to compare with now and restore. */
+  @Get('history')
+  @RequirePermissions('settings.manage')
+  history(@Query('section') section?: string, @Query('limit') limit?: string) {
+    if (section && !SETTINGS_SECTIONS.includes(section as SettingsSection)) {
+      throw badRequest(`Unknown settings section "${section}"`);
+    }
+    const take = Math.min(100, Math.max(1, Number(limit) || 30));
+    return this.settings.history(section as SettingsSection | undefined, take);
   }
 
   /** Most sections need settings.manage; branding is for the Super Admin only. */

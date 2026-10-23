@@ -7,11 +7,25 @@ export type ReceiptAlign = 'left' | 'center' | 'right';
 
 export type ReceiptBlock =
   | { type: 'logo' }
-  | { type: 'text'; text: string; align?: ReceiptAlign; bold?: boolean; large?: boolean }
+  | {
+      type: 'text';
+      text: string;
+      align?: ReceiptAlign;
+      bold?: boolean;
+      /** Double width and height. */
+      large?: boolean;
+      /** Double height only. */
+      tall?: boolean;
+      /** Double width only (half as many letters fit on a line). */
+      wide?: boolean;
+      underline?: boolean;
+      /** White on black. */
+      invert?: boolean;
+    }
   | { type: 'row'; left: string; right: string; bold?: boolean; large?: boolean }
-  | { type: 'divider'; char?: '-' | '=' }
+  | { type: 'divider'; char?: '-' | '=' | '.' | '*' }
   | { type: 'barcode'; value: string }
-  | { type: 'qr'; value: string }
+  | { type: 'qr'; value: string; size?: 'small' | 'medium' | 'large' }
   | { type: 'feed'; lines: number }
   /** Cut the paper here (between copies). */
   | { type: 'cut' };
