@@ -11,6 +11,7 @@ import {
   type SaleReturnDto,
   warrantyEnd,
   warrantyLabel,
+  type ReceiptCondition,
   type ReceiptField,
 } from '@shoppos/shared';
 
@@ -29,6 +30,15 @@ export interface SaleReceiptOptions {
   copy?: boolean;
   /** Print as a quotation (price offer) valid until this date: no payments, no bill number. */
   quoteValidUntil?: Date;
+}
+
+/** Why a piece is not printed on this bill (the editor shows it faded with the reason). */
+export type SkippedReason = 'hidden' | 'condition';
+
+export interface DesignPiece {
+  id: string;
+  blocks: ReceiptBlock[];
+  skipped?: SkippedReason;
 }
 
 /**
@@ -57,19 +67,61 @@ function saleReceiptBlocks(
   opts: SaleReceiptOptions,
   copyLabel?: string,
 ): ReceiptBlock[] {
-  return designBlocks(sale, settings, opts, copyLabel).flatMap((e) => e.blocks);
+  return designBlocks(sale, settings, opts, copyLabel)
+    .filter((e) => !e.skipped)
+    .flatMap((e) => e.blocks);
 }
+
+/** Does a "print only when …" condition hold for this bill? */
+export function conditionHolds(
+  when: ReceiptCondition | undefined,
+  sale: SaleDto,
+  opts: SaleReceiptOptions,
+): boolean {
+  const paid = (m: string) => sale.payments.some((p) => p.method === m);
+  switch (when ?? 'always') {
+    case 'always':
+      return true;
+    case 'customer':
+      return !!sale.customer;
+    case 'noCustomer':
+      return !sale.customer;
+    case 'cash':
+      return paid('CASH');
+    case 'card':
+      return paid('CARD');
+    case 'credit':
+      return paid('CREDIT');
+    case 'discount':
+      return sale.itemDiscountTotal + sale.billDiscountAmount > 0;
+    case 'warranty':
+      return sale.items.some((i) => i.warrantyDays > 0);
+    case 'wholesale':
+      return sale.priceMode === 'WHOLESALE';
+    case 'retail':
+      return sale.priceMode === 'RETAIL';
+    case 'quote':
+      return !!opts.quoteValidUntil;
+    case 'notQuote':
+      return !opts.quoteValidUntil;
+    case 'reprint':
+      return !!opts.copy;
+  }
+}
+
+const DIVIDER_CHARS = { dashed: '-', double: '=', dotted: '.', stars: '*' } as const;
 
 /**
  * The receipt design filled in with one bill, piece by piece. The editor shows each piece on its
- * own (so it can be selected and moved); printing joins them.
+ * own (so it can be selected and moved); printing joins them. Hidden pieces and pieces whose
+ * "print only when" does not hold for this bill are filled in too but marked `skipped`.
  */
 export function designBlocks(
   sale: SaleDto,
   settings: AllSettings,
   opts: SaleReceiptOptions = {},
   copyLabel?: string,
-): { id: string; blocks: ReceiptBlock[] }[] {
+): DesignPiece[] {
   const { shop, receipt, pos, tax } = settings;
   const money = (c: number) => formatMoney(c, { symbol: '', showCents: pos.showCents });
   const signed = (c: number) => `-${money(c)}`;
@@ -86,6 +138,29 @@ export function designBlocks(
     customer: sale.customer?.name ?? '',
     customer_phone: sale.customer?.phone ?? '',
     price_mode: sale.priceMode === 'WHOLESALE' ? 'Wholesale' : 'Retail',
+    day: receiptDate(sale.createdAt).slice(0, 10),
+    time: receiptDate(sale.createdAt).slice(11),
+    total: formatMoney(sale.total, { symbol: pos.currencySymbol, showCents: pos.showCents }),
+    item_count: String(sale.items.reduce((n, i) => n + i.qty, 0)),
+    payment_method: quote
+      ? ''
+      : [...new Set(sale.payments.map((p) => PAYMENT_METHOD_LABELS[p.method]))].join(' + '),
+    note: sale.note ?? '',
+  };
+  // A text whose fields are all empty (e.g. "Customer: {customer}" with no customer) is left out.
+  const fill = (text: string): string | null => {
+    let used = 0;
+    let filledCount = 0;
+    const out = text
+      .replace(/\{(\w+)\}/g, (m, key: string) => {
+        if (!(key in fields)) return m;
+        used++;
+        const v = fields[key as ReceiptField];
+        if (v) filledCount++;
+        return v;
+      })
+      .replace(/ {2,}/g, ' ');
+    return used > 0 && filledCount === 0 ? null : out;
   };
 
   // Shown above the first piece of the bill, whatever the design.
@@ -108,7 +183,7 @@ export function designBlocks(
   for (const i of sale.items)
     savings += i.discountAmount + Math.max(0, i.listPrice - i.unitPrice) * i.qty;
 
-  const out: { id: string; blocks: ReceiptBlock[] }[] = [];
+  const out: DesignPiece[] = [];
   let notesPlaced = !notes.length;
   for (const el of receipt.layout) {
     const b: ReceiptBlock[] = [];
@@ -117,51 +192,65 @@ export function designBlocks(
         b.push({ type: 'logo' });
         break;
       case 'text': {
-        // A line whose fields are all empty (e.g. "Customer: {customer}" with no customer) is left out.
-        let used = 0;
-        let filledCount = 0;
-        const filled = el.text
-          .replace(/\{(\w+)\}/g, (m, key: string) => {
-            if (!(key in fields)) return m;
-            used++;
-            const v = fields[key as ReceiptField];
-            if (v) filledCount++;
-            return v;
-          })
-          .replace(/ {2,}/g, ' ');
-        if (used > 0 && filledCount === 0) break;
+        const filled = fill(el.text);
+        if (filled === null) break;
         for (const part of filled.split('\n')) {
           b.push({
             type: 'text',
             text: part.trim(),
             align: el.align,
             bold: el.bold,
-            large: el.size === 'large',
+            ...(el.size === 'large' && { large: true }),
+            ...(el.size === 'tall' && { tall: true }),
+            ...(el.size === 'wide' && { wide: true }),
+            ...(el.underline && { underline: true }),
+            ...(el.invert && { invert: true }),
           });
         }
         break;
       }
+      case 'pair': {
+        const left = fill(el.left);
+        const right = fill(el.right);
+        if (left === null && right === null) break;
+        b.push({
+          type: 'row',
+          left: (left ?? '').trim(),
+          right: (right ?? '').trim(),
+          bold: el.bold,
+          large: el.size === 'large',
+        });
+        break;
+      }
+      case 'signature':
+        b.push(
+          { type: 'feed', lines: 2 },
+          { type: 'text', text: '..............................', align: 'center' },
+          { type: 'text', text: el.label, align: 'center' },
+        );
+        break;
       case 'divider':
-        b.push({ type: 'divider', char: el.style === 'double' ? '=' : '-' });
+        b.push({ type: 'divider', char: DIVIDER_CHARS[el.style] });
         break;
       case 'space':
         b.push({ type: 'feed', lines: el.lines });
         break;
       case 'items':
-        for (const item of sale.items) {
+        sale.items.forEach((item, index) => {
           const name = item.variantName
             ? `${item.productName} - ${item.variantName}`
             : item.productName;
+          const num = el.numbered ? `${index + 1}. ` : '';
           const gross = item.unitPrice * item.qty;
           if (el.layout === 'one-line') {
             b.push({
               type: 'row',
-              left: item.qty > 1 ? `${item.qty} x ${name}` : name,
+              left: `${num}${item.qty > 1 ? `${item.qty} x ` : ''}${name}`,
               right: money(gross),
             });
             if (item.qty > 1) b.push({ type: 'text', text: `   @ ${money(item.unitPrice)}` });
           } else {
-            b.push({ type: 'text', text: name });
+            b.push({ type: 'text', text: `${num}${name}` });
             b.push({
               type: 'row',
               left: `  ${item.qty} x ${money(item.unitPrice)}`,
@@ -187,22 +276,23 @@ export function designBlocks(
                 : '  Discount';
             b.push({ type: 'row', left: label, right: signed(item.discountAmount) });
           }
-        }
+        });
         break;
       case 'totals': {
         const discounts = sale.itemDiscountTotal + sale.billDiscountAmount;
-        if (discounts > 0 || sale.roundingAdjustment !== 0)
+        const full = !el.simple;
+        if (full && (discounts > 0 || sale.roundingAdjustment !== 0))
           b.push({ type: 'row', left: 'Subtotal', right: money(sale.subtotal) });
-        if (sale.itemDiscountTotal > 0)
+        if (full && sale.itemDiscountTotal > 0)
           b.push({ type: 'row', left: 'Item discounts', right: signed(sale.itemDiscountTotal) });
-        if (sale.billDiscountAmount > 0) {
+        if (full && sale.billDiscountAmount > 0) {
           const label =
             sale.billDiscountType === 'PERCENT' && sale.billDiscountValue
               ? `Bill discount ${bpToPercentText(sale.billDiscountValue)}%`
               : 'Bill discount';
           b.push({ type: 'row', left: label, right: signed(sale.billDiscountAmount) });
         }
-        if (sale.roundingAdjustment !== 0) {
+        if (full && sale.roundingAdjustment !== 0) {
           b.push({
             type: 'row',
             left: 'Rounding',
@@ -214,9 +304,9 @@ export function designBlocks(
           left: 'TOTAL',
           right: formatMoney(sale.total, { symbol: pos.currencySymbol, showCents: pos.showCents }),
           bold: true,
-          large: true,
+          large: el.bigTotal ?? true,
         });
-        if (tax.vatRegistered && tax.showTaxOnReceipt && sale.taxTotal > 0) {
+        if (full && tax.vatRegistered && tax.showTaxOnReceipt && sale.taxTotal > 0) {
           b.push({
             type: 'row',
             left: tax.pricesIncludeTax ? 'VAT included' : 'VAT',
@@ -251,18 +341,27 @@ export function designBlocks(
         if (!quote) b.push({ type: 'barcode', value: sale.number });
         break;
       case 'qr':
-        if (el.value.trim()) b.push({ type: 'qr', value: el.value.trim() });
+        if (el.value.trim())
+          b.push({ type: 'qr', value: el.value.trim(), ...(el.size && { size: el.size }) });
         break;
     }
+    const skipped: SkippedReason | undefined = el.hidden
+      ? 'hidden'
+      : !conditionHolds(el.when, sale, opts)
+        ? 'condition'
+        : undefined;
     // Quotation / copy / reprint notes go just before the bill number (or the items).
     if (
       !notesPlaced &&
-      ((el.type === 'text' && el.text.includes('{bill_no}')) || el.type === 'items')
+      !skipped &&
+      ((el.type === 'text' && el.text.includes('{bill_no}')) ||
+        (el.type === 'pair' && `${el.left}${el.right}`.includes('{bill_no}')) ||
+        el.type === 'items')
     ) {
       b.unshift(...notes);
       notesPlaced = true;
     }
-    out.push({ id: el.id, blocks: b });
+    out.push({ id: el.id, blocks: b, ...(skipped && { skipped }) });
   }
   if (!notesPlaced) out.unshift({ id: 'notes', blocks: notes });
   if (copyLabel === 'SHOP COPY') {

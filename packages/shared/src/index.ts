@@ -19,3 +19,6 @@ export * from './schemas/cash';
 export * from './schemas/reports';
 export * from './schemas/backups';
 export * from './receipt-layout';
+export * from './receipt-tools';
+export * from './settings-tools';
+export * from './assistant';

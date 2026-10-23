@@ -68,4 +68,48 @@ describe('ESC/POS encoder', () => {
       'laptops and phones',
     ]);
   });
+
+  it('prints tall, wide, underlined and white-on-black text', () => {
+    const styled: ReceiptDoc = {
+      blocks: [
+        { type: 'text', text: 'TALL', tall: true },
+        { type: 'text', text: 'WIDE', wide: true, underline: true },
+        { type: 'text', text: 'THANK YOU', invert: true },
+      ],
+    };
+    const bytes = encodeReceipt(styled, options);
+    const line = (size: number, underline: number, invert: number, text: string) =>
+      Buffer.from([
+        0x1b,
+        0x45,
+        0,
+        0x1d,
+        0x21,
+        size,
+        0x1b,
+        0x2d,
+        underline,
+        0x1d,
+        0x42,
+        invert,
+        ...Buffer.from(text),
+      ]);
+    expect(bytes.includes(line(0x01, 0, 0, 'TALL'))).toBe(true);
+    expect(bytes.includes(line(0x10, 1, 0, 'WIDE'))).toBe(true);
+    expect(bytes.includes(line(0x00, 0, 1, 'THANK YOU'))).toBe(true);
+    // Wide letters take two places, so wrapping uses half the paper width.
+    expect(renderText({ blocks: [{ type: 'text', text: 'x'.repeat(30), wide: true }] }, 48)).toBe(
+      `${'X'.repeat(24)}\n${'X'.repeat(6)}`,
+    );
+  });
+
+  it('prints QR codes in three sizes and dotted lines', () => {
+    const qr = (size: 'small' | 'large') =>
+      encodeReceipt({ blocks: [{ type: 'qr', value: 'x', size }] }, options).includes(
+        Buffer.from([0x1d, 0x28, 0x6b, 3, 0, 0x31, 0x43, size === 'small' ? 4 : 8]),
+      );
+    expect(qr('small')).toBe(true);
+    expect(qr('large')).toBe(true);
+    expect(renderText({ blocks: [{ type: 'divider', char: '.' }] }, 32)).toBe('.'.repeat(32));
+  });
 });

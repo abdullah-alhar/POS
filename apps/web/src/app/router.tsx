@@ -17,6 +17,7 @@ import { NewReturnPage, ReturnsPage } from '@/features/returns/returns-page';
 import { ProductEditorPage } from '@/features/products/product-editor-page';
 import { ProductsPage } from '@/features/products/products-page';
 import { SalesPage } from '@/features/sales/sales-page';
+import { ReceiptStudioPage } from '@/features/receipt-studio/studio-page';
 import { SettingsPage } from '@/features/settings/settings-page';
 import { UsersPage } from '@/features/users/users-page';
 import { AppLayout } from './app-layout';
@@ -97,7 +98,14 @@ export const router = createBrowserRouter([
           },
           {
             element: <RequirePermission permission="settings.manage" />,
-            children: [{ path: 'settings', element: <SettingsPage /> }],
+            children: [
+              { path: 'settings', element: <SettingsPage /> },
+              {
+                path: 'settings/receipt',
+                element: <ReceiptStudioPage />,
+                handle: { fullBleed: true },
+              },
+            ],
           },
           { path: '*', element: <NotFound /> },
         ],

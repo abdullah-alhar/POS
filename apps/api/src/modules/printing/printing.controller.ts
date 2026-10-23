@@ -9,26 +9,23 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { z } from 'zod';
 import {
   printSaleSchema,
   quoteSchema,
-  receiptSettingsSchema,
   type PrintSaleInput,
   type QuoteInput,
-  type ReceiptSettings,
 } from '@shoppos/shared';
 
-const receiptPreviewSchema = z.object({
-  receipt: receiptSettingsSchema,
-  print: z.boolean().default(false),
-});
 import { CurrentActor, RequirePermissions, type Actor } from '../../common/decorators';
 import { CashRegisterModule } from '../cash-register/cash-register.controller';
 import { ReturnsModule } from '../returns/returns.controller';
 import { SalesModule } from '../sales/sales.module';
 import { ZodPipe } from '../../common/zod.pipe';
-import { PrintingService } from './printing.service';
+import {
+  PrintingService,
+  receiptPreviewSchema,
+  type ReceiptPreviewInput,
+} from './printing.service';
 
 @Controller()
 export class PrintingController {
@@ -105,10 +102,10 @@ export class PrintingController {
   @HttpCode(200)
   @RequirePermissions('settings.manage')
   preview(
-    @Body(new ZodPipe(receiptPreviewSchema)) body: { receipt: ReceiptSettings; print: boolean },
+    @Body(new ZodPipe(receiptPreviewSchema)) body: ReceiptPreviewInput,
     @CurrentActor() actor: Actor,
   ) {
-    return this.printing.preview(body.receipt, body.print, actor);
+    return this.printing.preview(body, actor);
   }
 
   @Post('printing/test')

@@ -633,6 +633,18 @@ export class SalesService {
     return sale ? toSaleDto(sale) : null;
   }
 
+  /** A bill by its number, e.g. to preview the receipt design with it. */
+  async byNumber(number: string, actor: Actor): Promise<SaleDto | null> {
+    const sale = await this.prisma.sale.findFirst({
+      where: {
+        number: number.trim().toUpperCase(),
+        ...(hasPermission(actor.user, 'sales.viewAll') ? {} : { cashierId: actor.user.id }),
+      },
+      include: saleInclude,
+    });
+    return sale ? toSaleDto(sale) : null;
+  }
+
   async get(id: string, actor: Actor): Promise<SaleDto> {
     const sale = await this.prisma.sale.findUnique({ where: { id }, include: saleInclude });
     if (

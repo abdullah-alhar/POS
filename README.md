@@ -6,7 +6,7 @@
 
 Offline point-of-sale system for small retail and wholesale shops, built to run on a single Windows
 laptop. One program serves both the API and the web app; the shop only opens Chrome. The shop name,
-logo and colour are set in **Settings → Branding**.
+logo and colour are set in **Settings → Look**.
 
 | Part              | Tech                                                                                         |
 | ----------------- | -------------------------------------------------------------------------------------------- |
@@ -22,7 +22,13 @@ logo and colour are set in **Settings → Branding**.
 - Warranty and IMEI/serial tracking
 - Customers with credit, cash register (open/close day), expenses
 - Reports, dashboard, audit log
-- Drag-and-drop receipt editor, ESC/POS thermal printing with browser fallback
+- Receipt Studio: a full-screen receipt editor with layers, multi-select, styles, print-only-when
+  conditions, a design check with one-click fixes, history, compare, saved designs and 58/80 mm
+  preview; ESC/POS thermal printing with browser fallback
+- Settings with search, a setup check, compare / undo of unsaved changes, history with undo, and
+  copy to / from a file
+- Built-in assistant for the receipt and settings (works offline); optional free local AI through
+  Ollama, private to the shop
 - Backups to a local folder, USB stick and Google Drive
 - Windows installer with self-rolling-back updates, HTTPS and kiosk mode
 
@@ -76,13 +82,16 @@ never touch your development data.
 ```
 apps/api/prisma/        schema.prisma, migrations
 apps/api/src/modules/   auth, users, settings, audit, catalog, sales, printing, inventory, suppliers,
-                        purchases, returns, customers, cash-register, expenses, reports, backups, system
+                        purchases, returns, customers, cash-register, expenses, reports, backups, system,
+                        assistant
 apps/api/src/cli/       migrate, seed, tls (HTTPS certificate), backup (used by update.ps1)
 apps/api/test/          integration tests
 apps/web/src/features/  billing, sales, returns, customers, cash, expenses, products, catalog, inventory,
-                        purchases, labels, receipts, dashboard, reports, audit, backups, users, settings
+                        purchases, labels, receipts, receipt-studio, assistant, dashboard, reports, audit,
+                        backups, users, settings
 apps/web/src/components ui (shadcn), brand (logo, startup animation) + shared app components
-packages/shared/src/    money.ts, cart-calc.ts, barcode.ts, permissions.ts, schemas/
+packages/shared/src/    money.ts, cart-calc.ts, barcode.ts, permissions.ts, receipt-layout.ts, receipt-tools.ts,
+                        settings-tools.ts, assistant.ts, schemas/
 deploy/windows/         install, update and uninstall scripts
 scripts/                release build, dev database init
 assets/brand/           logo source files (SVG)

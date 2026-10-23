@@ -5,6 +5,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { config } from './config';
+import { AssistantModule } from './modules/assistant/assistant.controller';
 import { AuditViewModule } from './modules/audit/audit.controller';
 import { AuditModule } from './modules/audit/audit.service';
 import { BackupsModule } from './modules/backups/backups.controller';
@@ -58,6 +59,7 @@ function webApp(): DynamicModule[] {
     ReportsModule,
     AuditViewModule,
     BackupsModule,
+    AssistantModule,
     ...webApp(),
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
