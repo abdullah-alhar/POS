@@ -70,9 +70,18 @@ opening the drawer and selling above a customer's credit limit. You can change t
 ### Evening: close the day
 
 1. On **Home** press **Close the day** (or go to **Cash**).
-2. Count the notes and coins and type how many of each. The screen shows if the drawer is
-   **short** or **over**. Write a note if it is.
+2. Count the cash in the drawer and type the total in **Cash in the drawer**. The screen shows
+   if the drawer is **short** or **over**. Write a note if it is.
 3. Press **Close the day and print**. The day report prints and a backup is made.
+
+## Notifications
+
+The **bell** in the sidebar (on every page) shows what needs a look, with the number of new ones:
+items out of stock or running low, a day left open from an earlier day, no backup for two days
+and, for the owner, what others did that matters (voids, returns, sales without stock, price
+changes, big discounts, the drawer opened, wrong passwords). New ones also pop up for a few
+seconds. Click one to open the right page; opening the bell marks everything as read. Each
+person only sees what they are allowed to see.
 
 ## Customers and credit
 
@@ -91,8 +100,13 @@ put back in stock). Choose how the money is given back.
 
 ## Stock and purchases
 
-- **Products**: add and edit items, prices and barcodes. **Import** reads an Excel or CSV list.
-  Set the **Warranty** (7 days … 3 years); it is printed on the receipt with its end date.
+- **Products**: add and edit items, prices and barcodes. Each product in the list has **Edit**
+  and **Stock** (count it, or add / remove items) buttons; the product page also has **Adjust**
+  next to each stock number, and its stock history underneath. **Import** reads an Excel or CSV
+  list. Set the **Warranty** (7 days … 3 years); it is printed on the receipt with its end date.
+- **Variants are optional.** A simple product has one line: price and stock. Press **Add a variant
+  (colour, size …)** only when it comes in several; **Duplicate** on a line copies its prices to a
+  new line, so you only type the name and stock.
 - **Purchases → New purchase** when stock arrives. **Receive into stock** adds the items and
   updates the cost price. What you owe the supplier is shown under **Suppliers**.
 - **Products → Stock**: items running low, the history of every item, and stock counts (adjustments).
@@ -144,7 +158,8 @@ first. New bills print like this. Leaving with unsaved changes asks before throw
 ## Settings made easy
 
 - The menu on the left is grouped: **Your shop** (details, receipt, printer), **Selling** (billing,
-  VAT, admin approval), **App** (look, AI assistant) and **Tools** (history, copy settings).
+  admin approval), **App** (look, AI assistant) and **Tools** (history, copy settings). Bills
+  carry no tax (the VAT option was removed).
 - **Overview** (the first page of Settings) shows every section with how it is set now, lists
   anything worth fixing (each with a **Fix** button), and has the assistant: type "round bill
   totals to the nearest Rs 10", "cashiers can give up to 15% discount" or "lock the screen after 5

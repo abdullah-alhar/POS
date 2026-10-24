@@ -117,21 +117,23 @@ enum BackupStatus {
 // ───────────────────────── Users & system ─────────────────────────
 
 model User {
-  id           String    @id @default(uuid(7)) @db.Uuid
-  username     String    @unique
-  fullName     String
-  role         Role
-  passwordHash String
-  pinHash      String
-  permissions  String[]
-  isActive     Boolean   @default(true)
+  id                  String    @id @default(uuid(7)) @db.Uuid
+  username            String    @unique
+  fullName            String
+  role                Role
+  passwordHash        String
+  pinHash             String
+  permissions         String[]
+  /// The notifications bell was last opened (everything before is read).
+  notificationsSeenAt DateTime? @db.Timestamptz(3)
+  isActive            Boolean   @default(true)
   /// Profile photo as a small data URL (shrunk to 256 px in the browser).
-  avatar       String?
+  avatar              String?
   /// Increase to log the user out everywhere (password change, deactivation).
-  tokenVersion Int       @default(0)
-  lastLoginAt  DateTime? @db.Timestamptz(3)
-  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  tokenVersion        Int       @default(0)
+  lastLoginAt         DateTime? @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
 
   auditLogs         AuditLog[]        @relation("AuditActor")
   auditApprovals    AuditLog[]        @relation("AuditApprover")

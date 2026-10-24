@@ -267,6 +267,7 @@ export function BillingPage() {
       if (result.duplicate) toast.info(`${result.sale.number} was already saved.`);
       for (const w of result.warnings) toast.warning(w, { duration: 8000 });
       void qc.invalidateQueries({ queryKey: keys.posIndex });
+      void qc.invalidateQueries({ queryKey: ['notifications'] });
 
       if (settings?.pos.autoPrintReceipt ?? true) {
         const hasCash = payments.some((p) => p.method === 'CASH');

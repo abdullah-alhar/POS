@@ -15,6 +15,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { CustomersModule } from './modules/customers/customers.controller';
 import { ExpensesModule } from './modules/expenses/expenses.controller';
 import { InventoryModule } from './modules/inventory/inventory.controller';
+import { NotificationsModule } from './modules/notifications/notifications.controller';
 import { PrintingModule } from './modules/printing/printing.controller';
 import { ReportsModule } from './modules/reports/reports.controller';
 import { PurchasesModule } from './modules/purchases/purchases.controller';
@@ -50,6 +51,7 @@ function webApp(): DynamicModule[] {
     SalesModule,
     PrintingModule,
     InventoryModule,
+    NotificationsModule,
     SuppliersModule,
     PurchasesModule,
     ReturnsModule,

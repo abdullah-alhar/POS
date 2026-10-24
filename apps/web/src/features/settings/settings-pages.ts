@@ -3,7 +3,6 @@ import {
   History,
   LayoutGrid,
   Palette,
-  Percent,
   Printer,
   ReceiptText,
   ScanBarcode,
@@ -22,7 +21,6 @@ export type PageId =
   | 'receipt'
   | 'printer'
   | 'billing'
-  | 'tax'
   | 'approvals'
   | 'look'
   | 'assistant'
@@ -77,14 +75,6 @@ export const PAGES: {
     hint: 'Rounding, stock, screen lock',
     group: 'Selling',
     tone: 'bg-emerald-500/12 text-emerald-600',
-  },
-  {
-    id: 'tax',
-    label: 'VAT and tax',
-    icon: Percent,
-    hint: 'VAT number and tax rates',
-    group: 'Selling',
-    tone: 'bg-amber-500/12 text-amber-600',
   },
   {
     id: 'approvals',
@@ -169,8 +159,6 @@ export const SEARCH: { page: PageId; label: string; words: string }[] = [
     label: 'Wholesale / retail start',
     words: 'wholesale retail price mode default',
   },
-  { page: 'tax', label: 'VAT', words: 'vat tax registered number inclusive' },
-  { page: 'tax', label: 'Tax rates', words: 'tax rate percent default' },
   { page: 'approvals', label: 'Cashier discount limit', words: 'discount cashier limit percent' },
   {
     page: 'approvals',
@@ -201,7 +189,7 @@ export const ISSUE_PAGE: Record<SettingsIssue['section'], PageId> = {
   shop: 'shop',
   receipt: 'receipt',
   receiptLibrary: 'receipt',
-  tax: 'tax',
+  tax: 'billing',
   pos: 'billing',
   approvals: 'approvals',
   printer: 'printer',

@@ -204,13 +204,6 @@ describe('settings assistant', () => {
     expect(ask('shop phone is 011 234 5678').next.shop.phone).toBe('011 234 5678');
   });
 
-  it('turns VAT on with the VAT number', () => {
-    const out = ask('Our VAT number is 123456789-7000');
-    expect(out.next.tax).toMatchObject({ vatRegistered: true, vatNumber: '123456789-7000' });
-    expect(out.sections).toEqual(['tax']);
-    expect(out.summary).toContain('VAT registered: Off → On');
-  });
-
   it('adds and removes admin approvals', () => {
     const without = ask('cashiers can void bills without admin pin');
     expect(without.next.approvals.requireApprovalFor).not.toContain('VOID_SALE');

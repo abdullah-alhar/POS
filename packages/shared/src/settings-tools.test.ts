@@ -58,12 +58,14 @@ describe('checkSettings', () => {
   it('finds setup problems, worst first', () => {
     const s = {
       ...DEFAULT_SETTINGS,
-      tax: { ...DEFAULT_SETTINGS.tax, vatRegistered: true },
       backup: { ...DEFAULT_SETTINGS.backup, dailyAt: '' as const },
     };
     const issues = checkSettings(s);
-    expect(issues[0]).toMatchObject({ id: 'vat-number', level: 'error', section: 'tax' });
     expect(issues.map((i) => i.id)).toContain('daily-backup');
+    const order = { error: 0, warning: 1, tip: 2 };
+    expect(issues.map((i) => order[i.level])).toEqual(
+      [...issues.map((i) => order[i.level])].sort((a, b) => a - b),
+    );
   });
 });
 

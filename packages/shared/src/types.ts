@@ -673,6 +673,28 @@ export interface AssistantAbilities {
   voice: boolean;
 }
 
+/* -------------------------- Notifications -------------------------- */
+
+/** Something worth knowing: a state to fix (low stock, day left open) or an event (a void). */
+export interface NotificationDto {
+  /** Stable id: the same alert keeps its id while nothing changes. */
+  id: string;
+  kind: 'alert' | 'event';
+  level: 'info' | 'warning' | 'danger';
+  title: string;
+  detail?: string;
+  /** When it happened or became true. */
+  at: string;
+  /** Page to open. */
+  link?: string;
+  unread: boolean;
+}
+
+export interface NotificationsDto {
+  items: NotificationDto[];
+  unread: number;
+}
+
 /* ----------------------------- Backups ----------------------------- */
 
 export interface BackupDto {

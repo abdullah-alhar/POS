@@ -10,14 +10,7 @@ import { AiForm } from './ai-form';
 import { BrandingForm } from './branding-form';
 import { PrinterForm } from './printer-form';
 import { ReceiptCard } from './receipt-card';
-import {
-  AppearanceCard,
-  ApprovalsForm,
-  PosForm,
-  ShopForm,
-  TaxForm,
-  TaxRatesCard,
-} from './section-forms';
+import { AppearanceCard, ApprovalsForm, PosForm, ShopForm } from './section-forms';
 import { SettingsHistory } from './settings-history';
 import { Overview } from './settings-overview';
 import { GROUPS, PAGES, SEARCH, type PageId } from './settings-pages';
@@ -94,12 +87,6 @@ export function SettingsPage() {
               {page === 'receipt' && <ReceiptCard settings={settings} />}
               {page === 'printer' && <PrinterForm settings={settings} />}
               {page === 'billing' && <PosForm settings={settings} />}
-              {page === 'tax' && (
-                <>
-                  <TaxForm settings={settings} />
-                  <TaxRatesCard />
-                </>
-              )}
               {page === 'approvals' && <ApprovalsForm settings={settings} />}
               {page === 'look' && (
                 <>

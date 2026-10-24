@@ -31,8 +31,6 @@ function summary(id: PageId, settings: AllSettings): string {
       return formatSetting('printer.mode', settings.printer.mode);
     case 'billing':
       return `Totals: ${formatSetting('pos.roundingStep', settings.pos.roundingStep).toLowerCase()}`;
-    case 'tax':
-      return settings.tax.vatRegistered ? 'VAT registered' : 'No VAT';
     case 'approvals':
       return `Cashiers: up to ${formatSetting('approvals.cashierMaxDiscountBp', settings.approvals.cashierMaxDiscountBp)} discount`;
     case 'assistant':

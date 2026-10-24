@@ -223,14 +223,6 @@ export function checkSettings(s: AllSettings): SettingsIssue[] {
       detail: 'It is printed under the shop name.',
       section: 'shop',
     });
-  if (s.tax.vatRegistered && !s.tax.vatNumber.trim())
-    out.push({
-      id: 'vat-number',
-      level: 'error',
-      title: 'VAT is on but there is no VAT number',
-      detail: 'Enter the VAT number so it can be printed on bills.',
-      section: 'tax',
-    });
   if (s.approvals.cashierMaxDiscountBp > 5000)
     out.push({
       id: 'discount-limit',

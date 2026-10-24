@@ -35,10 +35,6 @@ export const ASSISTANT_SETTINGS: Record<
     kind: 'boolean',
     hint: 'extra shop copy with a signature line for credit sales',
   },
-  'tax.vatRegistered': { kind: 'boolean', hint: 'the shop is VAT registered' },
-  'tax.vatNumber': { kind: 'text', hint: 'VAT number' },
-  'tax.pricesIncludeTax': { kind: 'boolean', hint: 'shelf prices already include VAT' },
-  'tax.showTaxOnReceipt': { kind: 'boolean', hint: 'print the VAT amount on the receipt' },
   'pos.currencySymbol': { kind: 'text', hint: 'currency symbol, e.g. Rs' },
   'pos.roundingStep': {
     kind: 'choice',
@@ -104,7 +100,6 @@ export const SETTINGS_ASSISTANT_EXAMPLES = [
   'Lock the screen after 5 minutes',
   'Print 2 copies of every receipt',
   "Don't print receipts automatically",
-  'Our VAT number is 123456789-7000',
   'We use 58 mm paper',
   'Back up every day at 22:00',
 ];
@@ -196,22 +191,6 @@ function interpretSettingsClause(clause: string, s: AllSettings): SettingChange[
     if (n >= 1 && n <= 3) return [{ path: 'receipt.copies', value: n }];
   }
   if (/shop copy/.test(t)) return [{ path: 'receipt.shopCopyForCredit', value: !off }];
-
-  const vatNo =
-    /vat\s*(?:number|no\.?|reg(?:istration)?(?: number)?)\s*(?:is|to|=|:)?\s*([A-Z0-9][A-Z0-9 /-]{3,30})$/i.exec(
-      raw,
-    );
-  if (vatNo)
-    return [
-      { path: 'tax.vatNumber', value: vatNo[1]!.trim() },
-      { path: 'tax.vatRegistered', value: true },
-    ];
-  if (/vat/.test(t) && /(prices|shelf).*(include|inclusive)|(include|inclusive).*prices/.test(t))
-    return [{ path: 'tax.pricesIncludeTax', value: !off }];
-  if (/vat/.test(t) && /(receipt|bill|print)/.test(t))
-    return [{ path: 'tax.showTaxOnReceipt', value: !off }];
-  if (/vat/.test(t) && /regist/.test(t))
-    return [{ path: 'tax.vatRegistered', value: !/\b(not|no longer|un)/.test(t) }];
 
   const shop =
     /^(?:(?:the|our|my)\s+)?(?:shop\s+)?(name|phone(?: number)?|telephone|address|e-?mail)\s+(?:is|to|=|:|should be)\s+(.+)$/i.exec(
