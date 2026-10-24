@@ -15,6 +15,7 @@ import {
 import { Link, NavLink, Outlet, useLocation, useMatches, useNavigate } from 'react-router';
 import { AiOrb } from '@/features/assistant/ai-orb';
 import { AskAiButton } from '@/features/assistant/ask-ai-button';
+import { NotificationBell } from '@/features/notifications/notification-bell';
 import { ErrorBoundary } from './error-boundary';
 import { KeyboardLayer, openPanel } from './keyboard-layer';
 import { NAV, pageMatches, type NavItem, type NavPage } from './nav';
@@ -69,11 +70,19 @@ export function AppLayout() {
           collapsed ? 'w-16' : 'w-56',
         )}
       >
-        <div className={cn('flex h-16 items-center', collapsed ? 'justify-center px-2' : 'px-5')}>
+        <div
+          className={cn(
+            'flex shrink-0 items-center',
+            collapsed ? 'h-16 justify-center px-2' : 'h-24 px-4',
+          )}
+        >
           {collapsed ? (
-            <BrandLogo variant="mark" className="text-sidebar-primary h-6 w-auto max-w-10" />
+            <BrandLogo
+              variant="mark"
+              className="text-sidebar-primary h-10 w-auto max-w-12 object-contain"
+            />
           ) : (
-            <BrandLogo className="text-sidebar-primary h-8 w-auto max-w-full" />
+            <BrandLogo className="text-sidebar-primary h-16 w-full max-w-full object-contain object-left" />
           )}
         </div>
 
@@ -86,6 +95,7 @@ export function AppLayout() {
         </nav>
 
         <div className="border-sidebar-border space-y-1 border-t p-2">
+          <NotificationBell collapsed={collapsed} />
           <AskButton collapsed={collapsed} />
           <UserMenu collapsed={collapsed} />
           <button

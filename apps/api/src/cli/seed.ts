@@ -455,8 +455,6 @@ async function seedSample(adminId: string) {
         categoryId: categories.get(p.category)!,
         brandId: brands.get(p.brand)!,
         warrantyDays: WARRANTY_BY_CATEGORY[p.category] ?? 0,
-        // Watches and speakers carry a serial number, to show the IMEI / serial feature.
-        trackSerial: p.category === 'Smart Watches & Bands' || p.category === 'Speakers',
       },
     });
     const names = p.variants ?? [''];

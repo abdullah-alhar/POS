@@ -24,13 +24,12 @@ import { receiptHtml } from '../receipts/receipt-html';
 import { BillDiscountDialog } from './bill-discount-dialog';
 import { CartList } from './cart-list';
 import { QtyDialog } from './qty-dialog';
-import { SerialDialog } from './serial-dialog';
 import { CustomerChip, CustomerDialog } from './customer-dialog';
 import { beep } from './feedback';
 import { HoldDialog, RecallDialog, useHeldBills } from './held-bills-dialog';
 import { LineDialog } from './line-dialog';
 import { cashSessionKey, OpenDayDialog } from './open-day-dialog';
-import { PaymentDialog } from './payment-dialog';
+import { PAYMENT_PANEL, PaymentPanel } from './payment-panel';
 import { ScanBox, type ScanBoxHandle } from './scan-box';
 import { TotalsPanel } from './totals-panel';
 import { useCartTotals } from './use-cart-totals';
@@ -39,8 +38,11 @@ import { usePosIndex } from './use-pos-index';
 type DialogName =
   'pay' | 'discount' | 'hold' | 'recall' | 'openDay' | 'newBill' | 'customer' | null;
 
+/** Clicking these does not send the focus back to the scan box (e.g. the price on a line). */
+const KEEPS_FOCUS = 'input, textarea, select, [data-keep-focus]';
+
 /** A dialog that is open (closing dialogs keep their element for a short animation). */
-const OPEN_DIALOG = '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]';
+const OPEN_DIALOG = `[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], ${PAYMENT_PANEL}`;
 
 export function BillingPage() {
   const qc = useQueryClient();
@@ -62,7 +64,6 @@ export function BillingPage() {
   const [dialog, setDialog] = useState<DialogName>(null);
   const [editKey, setEditKey] = useState<string | null>(null);
   const [qtyKey, setQtyKey] = useState<string | null>(null);
-  const [serialFor, setSerialFor] = useState<PosIndexItem | null>(null);
   const [removeKey, setRemoveKey] = useState<string | null>(null);
   const removeLine = useCart((s) => s.lines.find((l) => l.key === removeKey));
   const confirmRemove = settings?.pos.confirmRemoveItem ?? true;
@@ -93,7 +94,7 @@ export function BillingPage() {
 
   // More than the stock: blocked when the shop does not sell with no stock (for everyone, also
   // admins), otherwise a warning. Covers +, typed quantities and the line editor.
-  const allowNoStock = settings?.pos.allowZeroStockSale ?? true;
+  const allowNoStock = settings?.pos.allowZeroStockSale ?? false;
   useEffect(() => {
     setStockGuard((line, qty, lines) => {
       if (!line.trackStock || qty <= line.qty) return qty;
@@ -125,26 +126,24 @@ export function BillingPage() {
       const cart = useCart.getState();
       const inCart = cart.lines.find((l) => l.variantId === item.variantId)?.qty ?? 0;
       if (item.trackStock && item.stockQty - inCart - qty < 0) {
-        if (settings && !settings.pos.allowZeroStockSale) {
+        if (!allowNoStock) {
+          const free = Math.max(0, item.stockQty - inCart);
           beep.error();
-          toast.error(`No stock left for ${item.name}`);
+          toast.error(
+            free > 0 ? `Only ${free} of ${item.name} in stock` : `No stock left for ${item.name}`,
+            { id: `stock-${item.variantId}` },
+          );
           return;
         }
         toast.warning(`${item.name}: only ${Math.max(0, item.stockQty - inCart)} in stock`, {
           id: `stock-${item.variantId}`,
         });
       }
-      if (item.trackSerial) {
-        // Ask for the serial number / IMEI (scan it from the box or type it).
-        beep.ok();
-        setSerialFor(item);
-        return;
-      }
       cart.add(item, qty);
       setLastResult(null);
       beep.ok();
     },
-    [settings],
+    [allowNoStock],
   );
 
   const notFound = useCallback((code: string) => {
@@ -248,7 +247,6 @@ export function BillingPage() {
         listPrice: listPriceOf(l, cart.priceMode),
         unitPrice: unitPriceOf(l, cart.priceMode),
         discount: l.discount,
-        serialNo: l.serialNo ?? null,
       })),
       billDiscount: cart.billDiscount,
       // The payment dialog only offers cash, card and bank transfer (credit comes with customers).
@@ -269,6 +267,7 @@ export function BillingPage() {
       if (result.duplicate) toast.info(`${result.sale.number} was already saved.`);
       for (const w of result.warnings) toast.warning(w, { duration: 8000 });
       void qc.invalidateQueries({ queryKey: keys.posIndex });
+      void qc.invalidateQueries({ queryKey: ['notifications'] });
 
       if (settings?.pos.autoPrintReceipt ?? true) {
         const hasCash = payments.some((p) => p.method === 'CASH');
@@ -384,7 +383,7 @@ export function BillingPage() {
   useEffect(() => {
     const onFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (document.querySelector(OPEN_DIALOG) || target.closest('input, textarea, select')) return;
+      if (document.querySelector(OPEN_DIALOG) || target.closest(KEEPS_FOCUS)) return;
       if (rootRef.current?.contains(target)) focusScan();
     };
     const onWindowFocus = () => focusScan();
@@ -401,8 +400,7 @@ export function BillingPage() {
       ref={rootRef}
       className="flex h-full"
       onMouseUp={(e) => {
-        if (!(e.target as HTMLElement).closest('input, textarea, select, [role="dialog"]'))
-          focusScan();
+        if (!(e.target as HTMLElement).closest(`${KEEPS_FOCUS}, [role="dialog"]`)) focusScan();
       }}
     >
       <section className="flex min-w-0 flex-1 flex-col">
@@ -497,18 +495,25 @@ export function BillingPage() {
         onNew={actions.newBill}
         onReprint={actions.reprint}
         onOpenDay={() => setDialog('openDay')}
-      />
-
-      <PaymentDialog
-        open={dialog === 'pay'}
-        onOpenChange={(open) => !open && close()}
-        total={totals.total}
-        credit={
-          customer && can('customers.credit')
-            ? { name: customer.name, balance: customer.balance, creditLimit: customer.creditLimit }
-            : null
+        payment={
+          dialog === 'pay' && lineCount > 0 ? (
+            <PaymentPanel
+              key={totals.total}
+              total={totals.total}
+              credit={
+                customer && can('customers.credit')
+                  ? {
+                      name: customer.name,
+                      balance: customer.balance,
+                      creditLimit: customer.creditLimit,
+                    }
+                  : null
+              }
+              onComplete={checkout}
+              onCancel={close}
+            />
+          ) : undefined
         }
-        onComplete={checkout}
       />
       <CustomerDialog open={dialog === 'customer'} onClose={close} />
       <LineDialog
@@ -522,17 +527,6 @@ export function BillingPage() {
       <HoldDialog open={dialog === 'hold'} onClose={close} />
       <RecallDialog open={dialog === 'recall'} onClose={close} catalog={catalog} />
       <OpenDayDialog open={dialog === 'openDay'} onClose={close} />
-      <SerialDialog
-        item={serialFor}
-        onDone={(serial) => {
-          if (serialFor && serial) {
-            useCart.getState().add(serialFor, 1, serial);
-            setLastResult(null);
-          }
-          setSerialFor(null);
-          focusScan();
-        }}
-      />
       <QtyDialog
         lineKey={qtyKey}
         onClose={() => {

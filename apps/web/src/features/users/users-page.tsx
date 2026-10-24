@@ -12,6 +12,7 @@ import {
   DEFAULT_CASHIER_PERMISSIONS,
   isAdminRole,
   passwordSchema,
+  PERMISSION_GROUPS,
   PERMISSIONS,
   pinSchema,
   ROLE_LABELS,
@@ -474,20 +475,32 @@ function PermissionsField({
   value: Permission[];
   onChange: (permissions: Permission[]) => void;
 }) {
+  const toggle = (p: Permission, on: boolean) =>
+    onChange(on ? [...new Set([...value, p])] : value.filter((x) => x !== p));
   return (
     <fieldset className="grid gap-2">
-      <legend className="mb-2 text-sm font-medium">This cashier can</legend>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-lg border p-3">
-        {ASSIGNABLE_PERMISSIONS.map((p) => (
-          <label key={p} className="flex items-center gap-2.5 text-sm">
-            <Checkbox
-              checked={value.includes(p)}
-              onCheckedChange={(checked) =>
-                onChange(checked ? [...value, p] : value.filter((x) => x !== p))
-              }
-            />
-            {PERMISSIONS[p]}
-          </label>
+      <legend className="mb-1 text-sm font-medium">What this cashier can see and do</legend>
+      <p className="text-muted-foreground mb-1 text-xs">
+        Untick a box to hide that page or action from this user; tick it again to show it back.
+      </p>
+      <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+        {PERMISSION_GROUPS.map((g) => (
+          <div key={g.title} className="grid content-start gap-2">
+            <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+              {g.title}
+            </p>
+            {g.permissions
+              .filter((p) => ASSIGNABLE_PERMISSIONS.includes(p))
+              .map((p) => (
+                <label key={p} className="flex items-center gap-2.5 text-sm">
+                  <Checkbox
+                    checked={value.includes(p)}
+                    onCheckedChange={(checked) => toggle(p, checked === true)}
+                  />
+                  {PERMISSIONS[p]}
+                </label>
+              ))}
+          </div>
         ))}
       </div>
     </fieldset>

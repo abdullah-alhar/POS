@@ -466,7 +466,6 @@ const PROP_LABELS: Record<string, string> = {
   showSku: 'item code',
   showDiscounts: 'discounts',
   showWarranty: 'warranty',
-  showSerial: 'serial number',
   numbered: 'numbers',
   bigTotal: 'big total',
   simple: 'simple total',

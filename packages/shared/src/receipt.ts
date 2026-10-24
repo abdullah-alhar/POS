@@ -6,7 +6,7 @@
 export type ReceiptAlign = 'left' | 'center' | 'right';
 
 export type ReceiptBlock =
-  | { type: 'logo' }
+  | { type: 'logo'; align?: ReceiptAlign }
   | {
       type: 'text';
       text: string;

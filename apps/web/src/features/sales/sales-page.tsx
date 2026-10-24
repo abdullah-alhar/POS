@@ -110,7 +110,7 @@ export function SalesPage() {
                 setQ(e.target.value.trim());
                 setPage(1);
               }}
-              placeholder="Bill number, IMEI / serial, or customer name / phone"
+              placeholder="Bill number, or customer name / phone"
               className="pl-9"
             />
           </div>
@@ -334,11 +334,6 @@ function SaleDetail({ sale }: { sale: SaleDto }) {
                       {i.discountType === 'PERCENT' && i.discountValue
                         ? `${bpToPercentText(i.discountValue)}%`
                         : money(i.discountAmount)}
-                    </span>
-                  )}
-                  {i.serialNo && (
-                    <span className="text-muted-foreground block font-mono text-xs">
-                      IMEI / SN {i.serialNo}
                     </span>
                   )}
                   {i.warrantyDays > 0 && (

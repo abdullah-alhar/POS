@@ -78,7 +78,6 @@ export function toProductDto(p: ProductWithRelations): ProductDto {
       : null,
     trackStock: p.trackStock,
     warrantyDays: p.warrantyDays,
-    trackSerial: p.trackSerial,
     isActive: p.isActive,
     variants: p.variants.map(toVariantDto),
     createdAt: p.createdAt.toISOString(),
@@ -217,7 +216,6 @@ export class ProductsService {
           taxRateId: input.taxRateId,
           trackStock: input.trackStock,
           warrantyDays: input.warrantyDays,
-          trackSerial: input.trackSerial,
           isActive: input.isActive,
         },
       });
@@ -325,7 +323,6 @@ export class ProductsService {
           taxRateId: input.taxRateId,
           trackStock: input.trackStock,
           warrantyDays: input.warrantyDays,
-          trackSerial: input.trackSerial,
           isActive: input.isActive,
         },
       });

@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import {
   Controller,
   useFieldArray,
@@ -16,6 +16,7 @@ import {
   bpToPercentText,
   discountPercentBp,
   productInputSchema,
+  type PosIndexItem,
   type ProductDto,
   type ProductInput,
   type ProductInputParsed,
@@ -42,9 +43,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { FullScreenLoader } from '@/app/guards';
 import { api, ApiError } from '@/lib/api';
 import { useCan } from '@/lib/auth';
-import { keys, useBrands, useCategories, useTaxRates } from '@/lib/queries';
+import { keys, useBrands, useCategories } from '@/lib/queries';
 import { cn } from '@/lib/utils';
-import { MovementsTable } from '../inventory/stock-page';
+import { usePosIndex } from '../billing/use-pos-index';
+import { AdjustDialog, MovementsTable } from '../inventory/stock-page';
 import { BarcodesInput } from './barcodes-input';
 
 const NONE = '__none';
@@ -75,7 +77,6 @@ function toFormValues(p: ProductDto): FormValues {
     taxRateId: p.taxRateId,
     trackStock: p.trackStock,
     warrantyDays: p.warrantyDays,
-    trackSerial: p.trackSerial,
     isActive: p.isActive,
     variants: p.variants.map((v) => ({
       id: v.id,
@@ -113,9 +114,13 @@ function ProductForm({ product }: { product: ProductDto | null }) {
   const qc = useQueryClient();
   const can = useCan();
   const readOnly = !can('products.manage');
+  const canAdjust = can('stock.adjust');
+  const { catalog } = usePosIndex();
+  const [adjusting, setAdjusting] = useState<PosIndexItem[] | null>(null);
+  const adjust = (variantIds: string[]) =>
+    setAdjusting(catalog?.items.filter((i) => variantIds.includes(i.variantId)) ?? []);
   const { data: categories = [] } = useCategories();
   const { data: brands = [] } = useBrands();
-  const { data: taxRates = [] } = useTaxRates();
 
   const form = useForm<FormValues, unknown, ProductInputParsed>({
     resolver: zodResolver(productInputSchema),
@@ -129,13 +134,25 @@ function ProductForm({ product }: { product: ProductDto | null }) {
           taxRateId: null,
           trackStock: true,
           warrantyDays: 0,
-          trackSerial: false,
           isActive: true,
           variants: [blankVariant()],
         },
   });
   const { control, register, handleSubmit, formState } = form;
   const variants = useFieldArray({ control, name: 'variants', keyName: 'key' });
+  const many = variants.fields.length > 1;
+  /** A new line with the same prices and reorder level, ready for its own name and stock. */
+  const duplicate = (i: number) => {
+    const v = form.getValues(`variants.${i}`);
+    variants.insert(i + 1, {
+      ...blankVariant(),
+      costPrice: v.costPrice,
+      retailPrice: v.retailPrice,
+      wholesalePrice: v.wholesalePrice,
+      reorderLevel: v.reorderLevel,
+      attributes: { ...(v.attributes ?? {}) },
+    });
+  };
   const stockById = useMemo(
     () => new Map(product?.variants.map((v) => [v.id, v.stockQty]) ?? []),
     [product],
@@ -233,16 +250,6 @@ function ProductForm({ product }: { product: ProductDto | null }) {
               noneLabel="No brand"
               options={brands.map((b) => ({ value: b.id, label: b.name }))}
             />
-            <LookupSelect
-              control={control}
-              name="taxRateId"
-              label="Tax"
-              noneLabel="Default tax rate"
-              options={taxRates.map((t) => ({
-                value: t.id,
-                label: `${t.name} (${bpToPercentText(t.rateBp)}%)`,
-              }))}
-            />
             <FormField
               label="Description (optional)"
               error={e.description?.message}
@@ -262,12 +269,6 @@ function ProductForm({ product }: { product: ProductDto | null }) {
                 name="isActive"
                 label="Active"
                 hint="Hidden products cannot be sold"
-              />
-              <SwitchField
-                control={control}
-                name="trackSerial"
-                label="Serial number / IMEI"
-                hint="Ask for it at the till; printed on the receipt"
               />
               <Controller
                 control={control}
@@ -302,17 +303,19 @@ function ProductForm({ product }: { product: ProductDto | null }) {
 
         <Card className="gap-3">
           <CardHeader>
-            <CardTitle>Variants & prices</CardTitle>
+            <CardTitle>{many ? 'Variants & prices' : 'Prices & stock'}</CardTitle>
             <CardDescription>
-              One line per colour, size or model. Leave SKU empty to create one automatically.
+              {many
+                ? 'One line per colour, size or model. Duplicate a line to copy its prices. Leave SKU empty to create one automatically.'
+                : 'Variants are optional: add one only when the item comes in colours, sizes or models. Leave SKU empty to create one automatically.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto px-0">
             <table className="w-full min-w-[960px] text-sm">
               <thead>
                 <tr className="text-muted-foreground border-b text-left text-xs tracking-wide uppercase">
-                  <th className="px-3 pb-2 pl-5 font-medium">Variant</th>
-                  <th className="px-2 pb-2 font-medium">SKU</th>
+                  {many && <th className="px-3 pb-2 pl-5 font-medium">Variant</th>}
+                  <th className={cn('px-2 pb-2 font-medium', !many && 'pl-5')}>SKU</th>
                   <th className="px-2 pb-2 font-medium">Barcodes</th>
                   <th className="px-2 pb-2 text-right font-medium">Cost</th>
                   <th className="px-2 pb-2 text-right font-medium">Retail</th>
@@ -334,6 +337,11 @@ function ProductForm({ product }: { product: ProductDto | null }) {
                     isExisting={!!field.id}
                     canRemove={!field.id && variants.fields.length > 1}
                     onRemove={() => variants.remove(i)}
+                    showName={many}
+                    onDuplicate={readOnly ? undefined : () => duplicate(i)}
+                    onAdjust={
+                      canAdjust && field.id && catalog ? () => adjust([field.id!]) : undefined
+                    }
                   />
                 ))}
               </tbody>
@@ -348,7 +356,7 @@ function ProductForm({ product }: { product: ProductDto | null }) {
                   variant="outline"
                   onClick={() => variants.append(blankVariant())}
                 >
-                  <Plus /> Add variant
+                  <Plus /> {many ? 'Add variant' : 'Add a variant (colour, size …)'}
                 </Button>
               </div>
             )}
@@ -368,6 +376,11 @@ function ProductForm({ product }: { product: ProductDto | null }) {
         </Card>
       )}
 
+      <AdjustDialog
+        open={!!adjusting}
+        items={adjusting ?? undefined}
+        onClose={() => setAdjusting(null)}
+      />
       <ConfirmDialog
         open={blocker.state === 'blocked'}
         onOpenChange={(open) => !open && blocker.reset?.()}
@@ -390,6 +403,9 @@ function VariantRow({
   isExisting,
   canRemove,
   onRemove,
+  showName,
+  onDuplicate,
+  onAdjust,
 }: {
   index: number;
   control: Control<FormValues, unknown, ProductInputParsed>;
@@ -399,6 +415,11 @@ function VariantRow({
   isExisting: boolean;
   canRemove: boolean;
   onRemove: () => void;
+  /** The name column is only shown when the product has more than one variant. */
+  showName: boolean;
+  onDuplicate?: () => void;
+  /** Change the stock of this saved variant (count, add, remove). */
+  onAdjust?: () => void;
 }) {
   const [cost, retail, active, trackStock] = useWatch({
     control,
@@ -416,11 +437,17 @@ function VariantRow({
 
   return (
     <tr className={cn('border-b align-top last:border-0', active === false && 'opacity-60')}>
-      <td className="py-2.5 pr-2 pl-5">
-        <Input placeholder="e.g. Black" className="w-32" {...register(`variants.${index}.name`)} />
-        <FieldError message={errors?.name?.message} />
-      </td>
-      <td className="px-2 py-2.5">
+      {showName && (
+        <td className="py-2.5 pr-2 pl-5">
+          <Input
+            placeholder="e.g. Black"
+            className="w-32"
+            {...register(`variants.${index}.name`)}
+          />
+          <FieldError message={errors?.name?.message} />
+        </td>
+      )}
+      <td className={cn('px-2 py-2.5', !showName && 'pl-5')}>
         <Input
           placeholder="Auto"
           className="w-24 font-mono text-xs uppercase"
@@ -479,11 +506,26 @@ function VariantRow({
         {isExisting ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="inline-flex h-10 items-center font-medium tabular-nums">
+              <span className="inline-flex h-10 items-center gap-1.5 font-medium tabular-nums">
                 {trackStock ? (stock ?? 0) : '—'}
+                {trackStock && onAdjust && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={onAdjust}
+                  >
+                    Adjust
+                  </Button>
+                )}
               </span>
             </TooltipTrigger>
-            <TooltipContent>Change stock with a stock adjustment or a purchase</TooltipContent>
+            <TooltipContent>
+              {onAdjust
+                ? 'Count the stock, or add / remove items'
+                : 'Change stock with a stock adjustment or a purchase'}
+            </TooltipContent>
           </Tooltip>
         ) : trackStock ? (
           <>
@@ -502,6 +544,22 @@ function VariantRow({
       </td>
       <td className="py-2.5 pr-5 pl-2">
         <div className="flex h-10 items-center justify-end gap-1">
+          {onDuplicate && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={onDuplicate}
+                  aria-label="Duplicate this line"
+                >
+                  <Copy />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Duplicate: a new variant with the same prices</TooltipContent>
+            </Tooltip>
+          )}
           {canRemove ? (
             <Button
               type="button"
@@ -549,7 +607,7 @@ function LookupSelect({
   options,
 }: {
   control: Control<FormValues, unknown, ProductInputParsed>;
-  name: 'categoryId' | 'brandId' | 'taxRateId';
+  name: 'categoryId' | 'brandId';
   label: string;
   noneLabel: string;
   options: { value: string; label: string }[];
@@ -589,7 +647,7 @@ function SwitchField({
   hint,
 }: {
   control: Control<FormValues, unknown, ProductInputParsed>;
-  name: 'trackStock' | 'isActive' | 'trackSerial';
+  name: 'trackStock' | 'isActive';
   label: string;
   hint: string;
 }) {
@@ -599,11 +657,7 @@ function SwitchField({
       name={name}
       render={({ field }) => (
         <div className="flex items-center gap-3">
-          <Switch
-            id={name}
-            checked={field.value ?? name !== 'trackSerial'}
-            onCheckedChange={field.onChange}
-          />
+          <Switch id={name} checked={field.value ?? true} onCheckedChange={field.onChange} />
           <div>
             <Label htmlFor={name}>{label}</Label>
             <p className="text-muted-foreground text-xs">{hint}</p>

@@ -1,0 +1,67 @@
+# Builds the Windows release and attaches it to a GitHub Release: when a version tag (v1.2.3) is
+# pushed, or when a release is published on GitHub (Releases → Draft a new release → tag v1.2.3).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  release:
+    types: [published]
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: pos
+          POSTGRES_DB: shoppos_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U pos" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://pos:pos@localhost:5432/shoppos_test
+      JWT_SECRET: release-build-only-not-a-real-secret-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+      - name: The tag matches the version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "v$version" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} is not v$version"; exit 1; }
+      - name: Build the Windows release
+        run: |
+          pnpm release:win
+          pnpm release:win --offline
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          notes=$(awk "/^## $version/{f=1;next} /^## /{f=0} f" CHANGELOG.md)
+          files=("release/shoppos-$version.zip" "release/shoppos-$version-offline.zip")
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" \
+              --title "ShopPOS $version" --notes "$notes"
+          fi

@@ -24,6 +24,26 @@ const find = (layout: ReceiptElement[], type: ReceiptElement['type']) =>
   layout.find((e) => e.type === type);
 
 describe('receipt assistant', () => {
+  it('moves the logo (and text) to the left, centre or right', () => {
+    const layout = classic();
+    for (const [q, align] of [
+      ['move the logo to the left', 'left'],
+      ['put the logo on the right', 'right'],
+      ['logo center', 'center'],
+    ] as const) {
+      const r = interpretReceiptCommand(q, layout, []);
+      expect(r.actions, q).toEqual([{ op: 'update', target: 'logo', align }]);
+      const out = applyReceiptActions(layout, r.actions, { copies: 1 });
+      expect(
+        out.layout.find((e) => e.type === 'logo'),
+        q,
+      ).toMatchObject({ align });
+    }
+    expect(interpretReceiptCommand('move the logo to the top', layout, []).actions).toEqual([
+      { op: 'move', target: 'logo', position: 'top' },
+    ]);
+  });
+
   it('makes the total big or small', () => {
     expect(find(run('make the total small').layout, 'totals')).toMatchObject({ bigTotal: false });
     expect(find(run('Please make the total bigger.').layout, 'totals')).toMatchObject({
@@ -182,13 +202,6 @@ describe('settings assistant', () => {
     expect(ask('back up at 21:15').next.backup.dailyAt).toBe('21:15');
     expect(ask('new bills start in wholesale').next.pos.defaultPriceMode).toBe('WHOLESALE');
     expect(ask('shop phone is 011 234 5678').next.shop.phone).toBe('011 234 5678');
-  });
-
-  it('turns VAT on with the VAT number', () => {
-    const out = ask('Our VAT number is 123456789-7000');
-    expect(out.next.tax).toMatchObject({ vatRegistered: true, vatNumber: '123456789-7000' });
-    expect(out.sections).toEqual(['tax']);
-    expect(out.summary).toContain('VAT registered: Off → On');
   });
 
   it('adds and removes admin approvals', () => {

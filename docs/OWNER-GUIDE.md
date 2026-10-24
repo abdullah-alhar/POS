@@ -44,19 +44,24 @@ Scan the item's barcode. It appears on the bill at once.
 Every warning ("Remove this item?", "Start a new bill?" …) is answered with **Enter** (yes) or
 **Esc** (no), so the mouse is never needed.
 
-**Phones, watches and other items with a serial number / IMEI:** when you scan one, a box asks for
-the IMEI. Scan the IMEI barcode on the box (or type it) and press Enter. The IMEI and the warranty
-end date are printed on the receipt. Later, type the IMEI in **Sales → Bills** to find the bill and
-see if the warranty is still valid. The same IMEI cannot be sold twice.
+**Changing a price on the bill:** click the price of the item on the bill, type the new price and
+press **Enter** (**Esc** keeps the old one). The line shows "Price changed"; a cashier needs your
+PIN for it when paying. **Ctrl + D** also changes the price, quantity and discount together.
 
-In the payment window: type the amount and press **Enter**; **F4** = exact cash. Press **C** for
-cash, **K** for card, **B** for bank transfer or **A** for the customer's account (credit) first.
-You can split a bill, for example part card and part cash.
+**Warranty:** items with a warranty show it on the bill, and the receipt prints the warranty end
+date. Find the bill later in **Sales → Bills** by its number or the customer.
 
-**More than the stock:** with **Settings → Billing → Allow selling items with no stock** off, nobody
-(also not an admin) can put more on the bill than is in stock: scanning, `+`, typed quantities and
-the line editor all stop at the stock, with a message. With it on, the bill goes through with a
-warning and the sale is written in the audit log.
+**Paying:** press **Pay** (**F4**): the payment opens right under the total. Type the amount and
+press **Enter**; **F4** = exact cash; **Esc** goes back to the bill. Press **C** for cash, **K** for
+card, **B** for bank transfer or **A** for the customer's account (credit) first. **Card and cash
+together:** choose Card, type the card amount and press Enter; the rest is then asked as cash and
+the change is shown.
+
+**More than the stock:** nobody (also not an admin) can put more on the bill than is in stock:
+scanning, `3*`, `+`, typed quantities and the line editor all stop at the stock, with a message
+such as "Only 31 in stock". Add the stock first (**Purchases** or **Stock → Adjust**). Only if you
+really want to sell without stock, turn on **Settings → Billing → Allow selling items with no
+stock**: the bill then goes through with a warning and is written in the audit log.
 
 Cashiers need your PIN for big discounts, price changes, voiding a bill, refunds, taking cash out,
 opening the drawer and selling above a customer's credit limit. You can change these rules in
@@ -65,9 +70,18 @@ opening the drawer and selling above a customer's credit limit. You can change t
 ### Evening: close the day
 
 1. On **Home** press **Close the day** (or go to **Cash**).
-2. Count the notes and coins and type how many of each. The screen shows if the drawer is
-   **short** or **over**. Write a note if it is.
+2. Count the cash in the drawer and type the total in **Cash in the drawer**. The screen shows
+   if the drawer is **short** or **over**. Write a note if it is.
 3. Press **Close the day and print**. The day report prints and a backup is made.
+
+## Notifications
+
+The **bell** in the sidebar (on every page) shows what needs a look, with the number of new ones:
+items out of stock or running low, a day left open from an earlier day, no backup for two days
+and, for the owner, what others did that matters (voids, returns, sales without stock, price
+changes, big discounts, the drawer opened, wrong passwords). New ones also pop up for a few
+seconds. Click one to open the right page; opening the bell marks everything as read. Each
+person only sees what they are allowed to see.
 
 ## Customers and credit
 
@@ -86,9 +100,13 @@ put back in stock). Choose how the money is given back.
 
 ## Stock and purchases
 
-- **Products**: add and edit items, prices and barcodes. **Import** reads an Excel or CSV list.
-  Set the **Warranty** (7 days … 3 years) and turn on **Serial number / IMEI** for phones and
-  other items you want to track one by one.
+- **Products**: add and edit items, prices and barcodes. Each product in the list has **Edit**
+  and **Stock** (count it, or add / remove items) buttons; the product page also has **Adjust**
+  next to each stock number, and its stock history underneath. **Import** reads an Excel or CSV
+  list. Set the **Warranty** (7 days … 3 years); it is printed on the receipt with its end date.
+- **Variants are optional.** A simple product has one line: price and stock. Press **Add a variant
+  (colour, size …)** only when it comes in several; **Duplicate** on a line copies its prices to a
+  new line, so you only type the name and stock.
 - **Purchases → New purchase** when stock arrives. **Receive into stock** adds the items and
   updates the cost price. What you owe the supplier is shown under **Suppliers**.
 - **Products → Stock**: items running low, the history of every item, and stock counts (adjustments).
@@ -116,6 +134,8 @@ latest bill. It works like a photo editor, but every button says what it does:
   time, cashier, customer, total, paid by, bill note …). A line whose fields are empty (for example
   "Customer: …" with no customer) is left out. **Print this piece when** prints a piece only on some
   bills, for example "Please pay within 30 days" only on credit sales.
+- **Logo**: select it and choose **Position** left, centre or right (or tell the assistant "move
+  the logo to the left"). Drag it, or the arrows in Layers, to move it up or down.
 - **Assistant**: type what you want in plain words, for example "make the total big", "add
   WhatsApp 0771234567", "add "No returns after 7 days" at the bottom", "save paper", "use the
   modern design" or "check my receipt". Each answer can be undone with one click.
@@ -138,7 +158,8 @@ first. New bills print like this. Leaving with unsaved changes asks before throw
 ## Settings made easy
 
 - The menu on the left is grouped: **Your shop** (details, receipt, printer), **Selling** (billing,
-  VAT, admin approval), **App** (look, AI assistant) and **Tools** (history, copy settings).
+  admin approval), **App** (look, AI assistant) and **Tools** (history, copy settings). Bills
+  carry no tax (the VAT option was removed).
 - **Overview** (the first page of Settings) shows every section with how it is set now, lists
   anything worth fixing (each with a **Fix** button), and has the assistant: type "round bill
   totals to the nearest Rs 10", "cashiers can give up to 15% discount" or "lock the screen after 5
@@ -259,7 +280,10 @@ drive").
 
 ## Users and PINs
 
-- **Settings → Users**: add a cashier with a PIN, and tick what they may do.
+- **Settings → Users**: add a cashier with a PIN, and tick what they may see and do, grouped as
+  Selling, Products and stock, Customers, Money and Running the shop. Untick **See the Sales page
+  (past bills)** to hide the Sales page from that person (they can still sell); tick it again to
+  show it back.
 - Everyone can change their own password and PIN under their name (bottom left) **→ Change my
   password / Change my PIN**.
 - **Settings → Billing → Lock the screen when nobody uses it for**: the till locks itself after a

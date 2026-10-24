@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, ScanBarcode, ShieldCheck, Tag, Trash2, TriangleAlert } from 'lucide-react';
 import {
   bpToPercentText,
+  centsToInput,
+  parseMoney,
   warrantyLabel,
   type CartTotals,
   type PosIndexItem,
 } from '@shoppos/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useMoney } from '@/lib/queries';
+import { useMoney, usePublicSettings } from '@/lib/queries';
 import { cn } from '@/lib/utils';
 import { listPriceOf, unitPriceOf, useCart } from '@/stores/cart';
 
@@ -32,7 +34,7 @@ export function CartList({
   const lines = useCart((s) => s.lines);
   const priceMode = useCart((s) => s.priceMode);
   const selectedKey = useCart((s) => s.selectedKey);
-  const { select, changeQty, setQty } = useCart.getState();
+  const { select, changeQty, setQty, updateLine } = useCart.getState();
   const selectedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -87,11 +89,6 @@ export function CartList({
               <p className="truncate font-medium">{line.name}</p>
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                 <span className="text-muted-foreground font-mono text-[11px]">{line.sku}</span>
-                {line.serialNo && (
-                  <Badge variant="secondary" className="h-5 font-mono">
-                    IMEI {line.serialNo}
-                  </Badge>
-                )}
                 {!!line.warrantyDays && (
                   <Badge variant="outline" className="h-5">
                     <ShieldCheck /> {warrantyLabel(line.warrantyDays)}
@@ -117,11 +114,19 @@ export function CartList({
                 )}
               </div>
             </div>
-            <span
-              className={cn('text-right tabular-nums', overridden && 'text-warning font-medium')}
-            >
-              {money(unit)}
-            </span>
+            <PriceInput
+              key={unit}
+              cents={unit}
+              listPrice={listPriceOf(line, priceMode)}
+              changed={overridden}
+              onCommit={(cents) => {
+                updateLine(line.key, {
+                  overridePrice: cents === listPriceOf(line, priceMode) ? null : cents,
+                });
+                select(line.key);
+              }}
+              onDone={onQtyDone}
+            />
             <div
               className="flex items-center justify-center gap-1"
               onDoubleClick={(e) => e.stopPropagation()}
@@ -133,7 +138,7 @@ export function CartList({
                   e.stopPropagation();
                   changeQty(line.key, -1);
                 }}
-                disabled={line.qty <= 1 || line.trackSerial}
+                disabled={line.qty <= 1}
                 aria-label="One less"
               >
                 <Minus />
@@ -154,7 +159,6 @@ export function CartList({
                   e.stopPropagation();
                   changeQty(line.key, 1);
                 }}
-                disabled={line.trackSerial}
                 aria-label="One more"
               >
                 <Plus />
@@ -226,5 +230,89 @@ function QtyInput({
       }}
       className="hover:border-input focus:border-ring focus:ring-ring/30 h-8 w-12 rounded-md border border-transparent bg-transparent text-center text-base font-semibold tabular-nums outline-none focus:bg-background focus:ring-2"
     />
+  );
+}
+
+/**
+ * The price of one, typed straight on the bill: click it, type the new price, Enter. A changed
+ * price is marked on the line; a cashier needs admin approval for it when paying.
+ */
+function PriceInput({
+  cents,
+  listPrice,
+  changed,
+  onCommit,
+  onDone,
+}: {
+  cents: number;
+  listPrice: number;
+  changed: boolean;
+  onCommit: (cents: number) => void;
+  onDone: () => void;
+}) {
+  const money = useMoney();
+  const { data } = usePublicSettings();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(centsToInput(cents));
+  const commit = () => {
+    const value = parseMoney(text);
+    if (value !== null && value >= 0 && value !== cents) onCommit(value);
+    else setText(centsToInput(cents));
+    setEditing(false);
+  };
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        data-keep-focus
+        title={
+          changed
+            ? `Price changed (normal ${money(listPrice)}). Click to change`
+            : 'Click to change the price'
+        }
+        onClick={(e) => {
+          e.stopPropagation();
+          setText(centsToInput(cents));
+          setEditing(true);
+        }}
+        onDoubleClick={(e) => e.stopPropagation()}
+        className={cn(
+          'hover:border-input hover:bg-background -mr-2 h-8 rounded-md border border-dashed border-transparent px-2 text-right tabular-nums transition-colors',
+          changed && 'text-warning font-medium',
+        )}
+      >
+        {money(cents)}
+      </button>
+    );
+  }
+  return (
+    <div className="relative -mr-2" onClick={(e) => e.stopPropagation()}>
+      <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-2 flex items-center text-[11px]">
+        {data?.pos.currencySymbol ?? 'Rs'}
+      </span>
+      <input
+        autoFocus
+        value={text}
+        inputMode="decimal"
+        aria-label="Price for one"
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => setText(e.target.value.replace(/[^\d.,]/g, '').slice(0, 12))}
+        onBlur={commit}
+        onDoubleClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+            onDone();
+          } else if (e.key === 'Escape') {
+            setText(centsToInput(cents));
+            setEditing(false);
+            onDone();
+          }
+        }}
+        className="border-ring ring-ring/30 bg-background h-8 w-full rounded-md border pr-2 pl-7 text-right font-semibold tabular-nums ring-2 outline-none"
+      />
+    </div>
   );
 }

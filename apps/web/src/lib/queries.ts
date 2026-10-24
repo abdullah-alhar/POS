@@ -5,7 +5,6 @@ import {
   type BrandDto,
   type CategoryDto,
   type PublicSettings,
-  type TaxRateDto,
 } from '@shoppos/shared';
 import { useCallback } from 'react';
 import { api } from './api';
@@ -18,7 +17,6 @@ export const keys = {
   settings: ['settings', 'all'] as const,
   categories: ['categories'] as const,
   brands: ['brands'] as const,
-  taxRates: ['tax-rates'] as const,
   products: ['products'] as const,
   product: (id: string) => ['products', id] as const,
   posIndex: ['pos-index'] as const,
@@ -40,9 +38,6 @@ export const useCategories = () =>
 
 export const useBrands = () =>
   useQuery({ queryKey: keys.brands, queryFn: () => api.get<BrandDto[]>('/brands') });
-
-export const useTaxRates = () =>
-  useQuery({ queryKey: keys.taxRates, queryFn: () => api.get<TaxRateDto[]>('/tax-rates') });
 
 /** Money formatter that follows the shop settings (Rs, no cents by default). */
 export function useMoney() {

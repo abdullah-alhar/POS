@@ -19,7 +19,7 @@ logo and colour are set in **Settings → Look**.
 - Keyboard-first billing (F12 lists every key), barcode scanning, held bills, quotations, price check
 - Retail and wholesale prices, line and bill discounts, admin approval for protected actions
 - Stock, purchases, suppliers, returns, CSV/Excel product import, barcode label sheets
-- Warranty and IMEI/serial tracking
+- Warranty on items, printed on the receipt with its end date
 - Customers with credit, cash register (open/close day), expenses
 - Reports, dashboard, audit log
 - Receipt Studio: a full-screen receipt editor with layers, multi-select, styles, print-only-when
@@ -119,6 +119,12 @@ pnpm release:win --offline   # also bundles Node.js, PostgreSQL and WinSW (~420 
 The installer sets up PostgreSQL and the POS as Windows services, HTTPS at `https://pos.shop` with a
 certificate authority trusted only on that laptop, and Chrome (or Edge) in full-screen kiosk mode at
 every start. Step-by-step guide: [docs/WINDOWS-TEST.md](docs/WINDOWS-TEST.md).
+
+### Releases
+
+Set the version in the four `package.json` files, add it to [CHANGELOG.md](CHANGELOG.md), then
+push a tag `v<version>` or publish a release with that tag on GitHub. The `Release` workflow
+checks the code, runs the tests, builds both zips and attaches them to the GitHub release.
 
 ### Backups
 

@@ -127,7 +127,6 @@ export interface ProductDto {
   taxRate: TaxRateDto | null;
   trackStock: boolean;
   warrantyDays: number;
-  trackSerial: boolean;
   isActive: boolean;
   variants: VariantDto[];
   createdAt: string;
@@ -167,7 +166,6 @@ export interface PosIndexItem {
   category: string | null;
   brand: string | null;
   warrantyDays: number;
-  trackSerial: boolean;
 }
 
 export interface PosIndex {
@@ -193,7 +191,6 @@ export interface SaleItemDto {
   lineTotal: Cents;
   returnedQty: number;
   warrantyDays: number;
-  serialNo: string | null;
 }
 
 export interface PaymentDto {
@@ -674,6 +671,28 @@ export interface AssistantAbilities {
   ai: boolean;
   /** Voice messages are turned into text by the AI service (otherwise by the browser). */
   voice: boolean;
+}
+
+/* -------------------------- Notifications -------------------------- */
+
+/** Something worth knowing: a state to fix (low stock, day left open) or an event (a void). */
+export interface NotificationDto {
+  /** Stable id: the same alert keeps its id while nothing changes. */
+  id: string;
+  kind: 'alert' | 'event';
+  level: 'info' | 'warning' | 'danger';
+  title: string;
+  detail?: string;
+  /** When it happened or became true. */
+  at: string;
+  /** Page to open. */
+  link?: string;
+  unread: boolean;
+}
+
+export interface NotificationsDto {
+  items: NotificationDto[];
+  unread: number;
 }
 
 /* ----------------------------- Backups ----------------------------- */

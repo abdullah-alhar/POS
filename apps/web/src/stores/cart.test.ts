@@ -13,7 +13,6 @@ const item = {
   taxRateBp: 0,
   stockQty: 2,
   trackStock: true,
-  trackSerial: false,
   warrantyDays: 0,
 } as unknown as PosIndexItem;
 

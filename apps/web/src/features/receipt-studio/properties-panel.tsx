@@ -297,6 +297,24 @@ function OnePiece({ el }: { el: ReceiptElement }) {
             />
           </Section>
         )}
+        {el.type === 'logo' && (
+          <Section title="Position">
+            <div className="flex flex-wrap gap-1">
+              {ALIGNS.map(([a, I]) => (
+                <Toggle
+                  key={a}
+                  on={(el.align ?? 'center') === a}
+                  onClick={() =>
+                    set({ align: a === 'center' ? undefined : a }, `Moved the logo ${a}`)
+                  }
+                  label={`Logo ${a}`}
+                >
+                  <I />
+                </Toggle>
+              ))}
+            </div>
+          </Section>
+        )}
         {['logo', 'payments', 'itemCount', 'savings', 'barcode'].includes(el.type) && (
           <p className="text-muted-foreground text-xs">
             {el.type === 'logo'
@@ -497,7 +515,6 @@ function ItemsOptions({ el, set }: { el: Of<'items'>; set: Setter }) {
       {(
         [
           ['showWarranty', 'Warranty and end date'],
-          ['showSerial', 'Serial number / IMEI'],
           ['showDiscounts', 'Discounts'],
           ['showSku', 'Item code'],
         ] as const

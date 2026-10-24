@@ -17,8 +17,6 @@ export const checkoutLineSchema = z.object({
   /** The price charged. Different from listPrice means a price override (needs approval). */
   unitPrice: centsSchema,
   discount: discountSchema.nullable().optional(),
-  /** Serial number / IMEI of the item (one line per serial). */
-  serialNo: z.string().trim().max(60).nullable().optional(),
 });
 
 export const checkoutPaymentSchema = z.object({
@@ -77,7 +75,6 @@ export const heldCartSchema = z.object({
         listPrice: centsSchema,
         unitPrice: centsSchema,
         discount: discountSchema.nullable().optional(),
-        serialNo: z.string().max(60).nullable().optional(),
       }),
     )
     .min(1, 'There is nothing to hold')

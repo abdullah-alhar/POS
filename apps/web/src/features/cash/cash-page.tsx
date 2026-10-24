@@ -10,12 +10,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  LKR_DENOMINATIONS,
-  type CashSessionDto,
-  type CashSessionSummary,
-  type Page,
-} from '@shoppos/shared';
+import { type CashSessionDto, type CashSessionSummary, type Page } from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { FormField } from '@/components/form-field';
 import { MoneyInput } from '@/components/money-input';
@@ -330,34 +325,25 @@ function CloseDayForm({ summary, onDone }: { summary: CashSessionSummary; onDone
   const qc = useQueryClient();
   const money = useMoney();
   const printDay = usePrintDay();
-  const [counts, setCounts] = useState<Record<string, string>>({});
-  const [typed, setTyped] = useState<number | null>(null);
+  const [counted, setCounted] = useState<number>(Number.NaN);
   const [note, setNote] = useState('');
-  const fromNotes = LKR_DENOMINATIONS.reduce((s, d) => s + d * 100 * (Number(counts[d]) || 0), 0);
-  const usedNotes = Object.values(counts).some((v) => Number(v) > 0);
-  const counted = typed ?? fromNotes;
-  const diff = counted - summary.expectedCash;
+  const entered = Number.isFinite(counted) && counted >= 0;
+  const diff = entered ? counted - summary.expectedCash : 0;
 
   const close = useMutation({
     mutationFn: () =>
       api.post<CashSessionSummary>('/cash-sessions/current/close', {
         countedCash: counted,
-        denominations: usedNotes
-          ? Object.fromEntries(
-              Object.entries(counts)
-                .filter(([, v]) => Number(v) > 0)
-                .map(([k, v]) => [k, Number(v)]),
-            )
-          : undefined,
         note: note || undefined,
       }),
     onSuccess: (closed) => {
+      // Close this window first: Chrome's print window holds the page until it is done.
+      onDone();
       qc.setQueryData(cashSessionKey, { session: null });
       qc.removeQueries({ queryKey: summaryKey });
       qc.invalidateQueries({ queryKey: ['cash-sessions'] });
       toast.success('The day is closed. Printing the day report.');
-      void printDay(closed.id);
-      onDone();
+      setTimeout(() => void printDay(closed.id), 400);
     },
   });
 
@@ -366,35 +352,24 @@ function CloseDayForm({ summary, onDone }: { summary: CashSessionSummary; onDone
       className="grid gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        close.mutate();
+        if (entered) close.mutate();
       }}
     >
       <DialogHeader>
         <DialogTitle>Close the day</DialogTitle>
         <DialogDescription>
-          Count the notes and coins in the drawer. The day report prints when you finish.
+          Count the cash in the drawer and type the total. The day report prints when you finish.
         </DialogDescription>
       </DialogHeader>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-5">
-        {LKR_DENOMINATIONS.map((d) => (
-          <label key={d} className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">Rs {d.toLocaleString()}</span>
-            <Input
-              inputMode="numeric"
-              value={counts[d] ?? ''}
-              onChange={(e) => {
-                setTyped(null);
-                setCounts((c) => ({ ...c, [d]: e.target.value.replace(/\D/g, '') }));
-              }}
-              placeholder="0"
-              className="tabular-nums"
-            />
-          </label>
-        ))}
-      </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField label="Cash counted">
-          <MoneyInput value={counted} onChange={setTyped} />
+        <FormField label="Cash in the drawer" hint="The total of all notes and coins">
+          <MoneyInput
+            autoFocus
+            value={counted}
+            onChange={setCounted}
+            className="h-12 text-xl font-semibold"
+            placeholder="0"
+          />
         </FormField>
         <div className="rounded-lg border p-3 text-sm">
           <div className="flex justify-between">
@@ -407,8 +382,10 @@ function CloseDayForm({ summary, onDone }: { summary: CashSessionSummary; onDone
               diff < 0 ? 'text-destructive' : diff > 0 ? 'text-success' : '',
             )}
           >
-            <span>{diff === 0 ? 'Exact' : diff < 0 ? 'Short' : 'Over'}</span>
-            <span className="tabular-nums">{money(Math.abs(diff))}</span>
+            <span>
+              {!entered ? 'Difference' : diff === 0 ? 'Exact' : diff < 0 ? 'Short' : 'Over'}
+            </span>
+            <span className="tabular-nums">{entered ? money(Math.abs(diff)) : '—'}</span>
           </div>
         </div>
       </div>
@@ -416,7 +393,7 @@ function CloseDayForm({ summary, onDone }: { summary: CashSessionSummary; onDone
         <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
       </FormField>
       <DialogFooter>
-        <Button type="submit" size="lg" disabled={close.isPending}>
+        <Button type="submit" size="lg" disabled={close.isPending || !entered}>
           {close.isPending ? <Loader2 className="animate-spin" /> : <Moon />} Close the day and
           print
         </Button>

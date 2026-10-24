@@ -37,7 +37,7 @@ export const NAV: NavItem[] = [
     label: 'Sales',
     icon: ReceiptText,
     pages: [
-      { to: '/sales', label: 'Bills', permission: 'sales.create' },
+      { to: '/sales', label: 'Bills', permission: 'sales.view' },
       { to: '/returns', label: 'Returns', permission: 'returns.create' },
     ],
   },

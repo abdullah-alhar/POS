@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Package, Plus, Search, Upload } from 'lucide-react';
+import {
+  Boxes,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Upload,
+} from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import type { Page, ProductListItem } from '@shoppos/shared';
+import type { Page, PosIndexItem, ProductListItem } from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +38,8 @@ import {
 import { api, qs } from '@/lib/api';
 import { useCan } from '@/lib/auth';
 import { keys, useBrands, useCategories, useMoney } from '@/lib/queries';
+import { usePosIndex } from '../billing/use-pos-index';
+import { AdjustDialog } from '../inventory/stock-page';
 import { ImportDialog } from './import-dialog';
 
 const PAGE_SIZE = 50;
@@ -40,6 +51,10 @@ export function ProductsPage() {
   const can = useCan();
   const money = useMoney();
   const [importing, setImporting] = useState(false);
+  const { catalog } = usePosIndex();
+  const [adjusting, setAdjusting] = useState<PosIndexItem[] | null>(null);
+  const canEdit = can('products.manage');
+  const canAdjust = can('stock.adjust');
   const { data: categories = [] } = useCategories();
   const { data: brands = [] } = useBrands();
 
@@ -109,6 +124,11 @@ export function ProductsPage() {
         }
       />
       <ImportDialog open={importing} onClose={() => setImporting(false)} />
+      <AdjustDialog
+        open={!!adjusting}
+        items={adjusting ?? undefined}
+        onClose={() => setAdjusting(null)}
+      />
 
       <Card className="gap-0 py-0">
         <div className="flex flex-wrap items-center gap-3 border-b p-3">
@@ -228,9 +248,34 @@ export function ProductsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1.5">
+                    <div className="flex items-center justify-end gap-1.5">
                       {p.lowStockVariants > 0 && <Badge variant="warning">Low stock</Badge>}
                       {!p.isActive && <Badge variant="secondary">Hidden</Badge>}
+                      {canAdjust && p.trackStock && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8"
+                          disabled={!catalog}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAdjusting(catalog?.items.filter((i) => i.productId === p.id) ?? []);
+                          }}
+                        >
+                          <Boxes /> Stock
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/products/${p.id}`);
+                        }}
+                      >
+                        <Pencil /> {canEdit ? 'Edit' : 'View'}
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

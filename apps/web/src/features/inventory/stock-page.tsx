@@ -346,9 +346,31 @@ interface AdjustLine {
   qty: string;
 }
 
-function AdjustDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+/**
+ * Change stock: type the counted number, or add / remove items. Opened from Stock, from the
+ * product list and from the product itself (then with that product's items already listed).
+ */
+export function AdjustDialog({
+  open,
+  onClose,
+  items,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Items to list at once. */
+  items?: PosIndexItem[];
+}) {
   const qc = useQueryClient();
   const [lines, setLines] = useState<AdjustLine[]>([]);
+  // Start with the given items each time the window opens.
+  const [openedWith, setOpenedWith] = useState<PosIndexItem[] | undefined>(undefined);
+  if (open && items && items !== openedWith) {
+    setOpenedWith(items);
+    setLines(
+      items.map((item) => ({ item, mode: 'COUNT', qty: String(Math.max(item.stockQty, 0)) })),
+    );
+  }
+  if (!open && openedWith) setOpenedWith(undefined);
   const [reason, setReason] = useState<AdjustmentReason>('COUNT_CORRECTION');
   const [note, setNote] = useState('');
 
@@ -368,6 +390,7 @@ function AdjustDialog({ open, onClose }: { open: boolean; onClose: () => void })
       qc.invalidateQueries({ queryKey: ['stock'] });
       qc.invalidateQueries({ queryKey: keys.posIndex });
       qc.invalidateQueries({ queryKey: keys.products });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
       setLines([]);
       setNote('');
       onClose();

@@ -1,17 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  GitCompareArrows,
-  Monitor,
-  Moon,
-  Plus,
-  RotateCcw,
-  Star,
-  Sun,
-  Trash2,
-  Undo2,
-} from 'lucide-react';
+import { GitCompareArrows, Monitor, Moon, RotateCcw, Sun, Undo2 } from 'lucide-react';
 import {
   Controller,
   useForm,
@@ -34,7 +24,6 @@ import {
 } from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FormField } from '@/components/form-field';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -57,7 +46,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
-import { keys, useTaxRates } from '@/lib/queries';
+import { keys } from '@/lib/queries';
 import { useTheme, type ThemeChoice } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import { DiffTable } from './diff-table';
@@ -277,150 +266,6 @@ export function ShopForm({ settings }: { settings: AllSettings }) {
   );
 }
 
-// ── Tax ──
-
-export function TaxForm({ settings }: { settings: AllSettings }) {
-  const sf = useSectionForm('tax', settings);
-  const { form } = sf;
-  const registered = useWatch({ control: form.control, name: 'vatRegistered' });
-  return (
-    <SectionCard
-      title="VAT"
-      description="Default is no tax. Turn this on if the shop registers for VAT."
-      sf={sf as SectionForm}
-    >
-      <SwitchRow
-        control={form.control}
-        name="vatRegistered"
-        label="The shop is VAT registered"
-        hint="When off, no tax is worked out on bills."
-      />
-      {registered && (
-        <>
-          <FormField label="VAT number" error={form.formState.errors.vatNumber?.message}>
-            <Input {...form.register('vatNumber')} />
-          </FormField>
-          <SwitchRow
-            control={form.control}
-            name="pricesIncludeTax"
-            label="Shelf prices include VAT"
-            hint="Recommended. VAT is taken out of the price instead of added on top."
-          />
-          <SwitchRow
-            control={form.control}
-            name="showTaxOnReceipt"
-            label="Show VAT on the receipt"
-          />
-        </>
-      )}
-    </SectionCard>
-  );
-}
-
-export function TaxRatesCard() {
-  const qc = useQueryClient();
-  const { data: rates = [] } = useTaxRates();
-  const [name, setName] = useState('');
-  const [rate, setRate] = useState('');
-  const refresh = () => {
-    qc.invalidateQueries({ queryKey: keys.taxRates });
-    qc.invalidateQueries({ queryKey: keys.posIndex });
-  };
-  const create = useMutation({
-    mutationFn: () =>
-      api.post('/tax-rates', { name, rateBp: parsePercent(rate), isDefault: false }),
-    onSuccess: () => {
-      setName('');
-      setRate('');
-      refresh();
-      toast.success('Tax rate added');
-    },
-  });
-  const makeDefault = useMutation({
-    mutationFn: (r: (typeof rates)[number]) =>
-      api.patch(`/tax-rates/${r.id}`, { name: r.name, rateBp: r.rateBp, isDefault: true }),
-    onSuccess: refresh,
-  });
-  const remove = useMutation({
-    mutationFn: (id: string) => api.delete(`/tax-rates/${id}`),
-    onSuccess: refresh,
-  });
-  const rateBp = parsePercent(rate);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tax rates</CardTitle>
-        <CardDescription>
-          The default rate is used for products that do not choose one.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <ul className="divide-y rounded-lg border">
-          {rates.map((r) => (
-            <li key={r.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-              <span className="flex-1 font-medium">{r.name}</span>
-              <span className="text-muted-foreground tabular-nums">
-                {bpToPercentText(r.rateBp)}%
-              </span>
-              {r.isDefault ? (
-                <Badge>Default</Badge>
-              ) : (
-                <>
-                  <Button size="sm" variant="ghost" onClick={() => makeDefault.mutate(r)}>
-                    <Star /> Make default
-                  </Button>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    onClick={() => remove.mutate(r.id)}
-                    aria-label={`Delete ${r.name}`}
-                  >
-                    <Trash2 />
-                  </Button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            create.mutate();
-          }}
-        >
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name, e.g. VAT 18%"
-          />
-          <div className="relative w-28 shrink-0">
-            <Input
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              placeholder="18"
-              inputMode="decimal"
-              className="pr-7 text-right"
-            />
-            <span className="text-muted-foreground absolute inset-y-0 right-3 flex items-center text-sm">
-              %
-            </span>
-          </div>
-          <Button
-            type="submit"
-            disabled={
-              !name.trim() || rateBp === null || rateBp < 0 || rateBp > 10_000 || create.isPending
-            }
-          >
-            <Plus /> Add
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
 // ── Billing behaviour ──
 
 export function PosForm({ settings }: { settings: AllSettings }) {
@@ -483,7 +328,7 @@ export function PosForm({ settings }: { settings: AllSettings }) {
         control={form.control}
         name="allowZeroStockSale"
         label="Allow selling items with no stock"
-        hint="The cashier sees a warning, and the sale is written in the audit log."
+        hint="Off (recommended): nobody can bill more than the stock. On: the bill goes through with a warning and is written in the audit log."
       />
       <SwitchRow
         control={form.control}

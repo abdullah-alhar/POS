@@ -260,7 +260,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
     currencySymbol: 'Rs',
     roundingStep: 100,
     showCents: false,
-    allowZeroStockSale: true,
+    allowZeroStockSale: false,
     defaultPriceMode: 'RETAIL',
     autoPrintReceipt: true,
     autoLockMinutes: 0,

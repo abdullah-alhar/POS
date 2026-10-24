@@ -22,9 +22,7 @@ export interface CartLine {
   discount: Discount | null;
   taxRateBp: number;
   trackStock: boolean;
-  /** Items with a serial number / IMEI are one per line. Older saved bills may not have these. */
-  trackSerial?: boolean;
-  serialNo?: string | null;
+  /** Older saved bills may not have it. */
   warrantyDays?: number;
 }
 
@@ -60,7 +58,7 @@ interface CartState {
   /** The last finished bill, for "reprint last" (F10). */
   lastSaleId: string | null;
 
-  add: (item: PosIndexItem, qty?: number, serialNo?: string | null) => CartLine;
+  add: (item: PosIndexItem, qty?: number) => CartLine;
   setQty: (key: string, qty: number) => void;
   changeQty: (key: string, delta: number) => void;
   remove: (key: string) => void;
@@ -68,7 +66,7 @@ interface CartState {
   moveSelection: (delta: number) => void;
   updateLine: (
     key: string,
-    patch: Partial<Pick<CartLine, 'qty' | 'overridePrice' | 'discount' | 'serialNo'>>,
+    patch: Partial<Pick<CartLine, 'qty' | 'overridePrice' | 'discount'>>,
   ) => void;
   setBillDiscount: (discount: Discount | null) => void;
   setPriceMode: (mode: PriceMode) => void;
@@ -99,8 +97,6 @@ function fromItem(item: PosIndexItem, qty: number): CartLine {
     discount: null,
     taxRateBp: item.taxRateBp,
     trackStock: item.trackStock,
-    trackSerial: item.trackSerial,
-    serialNo: null,
     warrantyDays: item.warrantyDays,
   };
 }
@@ -127,13 +123,7 @@ export const useCart = create<CartState>()(
       selectedKey: null,
       lastSaleId: null,
 
-      add(item, qty = 1, serialNo = null) {
-        if (item.trackSerial) {
-          // Each serial number / IMEI is its own line.
-          const line = { ...fromItem(item, 1), serialNo };
-          set((s) => ({ lines: [...s.lines, line], selectedKey: line.key }));
-          return line;
-        }
+      add(item, qty = 1) {
         const existing = get().lines.find((l) => l.variantId === item.variantId);
         if (existing) {
           const updated = { ...existing, qty: existing.qty + qty };
@@ -150,7 +140,6 @@ export const useCart = create<CartState>()(
       setQty(key, wanted) {
         const line = get().lines.find((l) => l.key === key);
         if (!line || wanted < 1) return;
-        if (wanted > 1 && line.trackSerial) return;
         const qty = stockGuard ? stockGuard(line, wanted, get().lines) : wanted;
         if (qty === line.qty) return;
         set((s) => ({ lines: s.lines.map((l) => (l.key === key ? { ...l, qty } : l)) }));
@@ -233,7 +222,6 @@ export const useCart = create<CartState>()(
           // A typed-in price is kept; otherwise today's price is used.
           if (held.unitPrice !== held.listPrice) line.overridePrice = held.unitPrice;
           line.discount = held.discount ?? null;
-          line.serialNo = held.serialNo ?? null;
           lines.push(line);
         }
         set({
@@ -269,7 +257,6 @@ export const useCart = create<CartState>()(
             listPrice: listPriceOf(l, priceMode),
             unitPrice: unitPriceOf(l, priceMode),
             discount: l.discount,
-            serialNo: l.serialNo ?? null,
           })),
           billDiscount,
           note: note || undefined,

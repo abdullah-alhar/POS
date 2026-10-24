@@ -2,6 +2,7 @@ import type { Role } from './enums';
 
 export const PERMISSIONS = {
   'sales.create': 'Make sales',
+  'sales.view': 'See the Sales page (past bills)',
   'sales.viewAll': 'See bills made by other users',
   'sales.void': 'Void bills without asking an admin',
   'returns.create': 'Take returns and give refunds',
@@ -36,10 +37,36 @@ export const ASSIGNABLE_PERMISSIONS = ALL_PERMISSIONS.filter(
 /** What a new cashier can do. The admin can tick more boxes per user. */
 export const DEFAULT_CASHIER_PERMISSIONS: Permission[] = [
   'sales.create',
+  'sales.view',
   'returns.create',
   'products.view',
   'customers.manage',
   'cash.register',
+];
+
+/** The permission boxes on the user form, by the part of the shop they belong to. */
+export const PERMISSION_GROUPS: { title: string; permissions: Permission[] }[] = [
+  {
+    title: 'Selling',
+    permissions: [
+      'sales.create',
+      'sales.view',
+      'sales.viewAll',
+      'sales.void',
+      'returns.create',
+      'drawer.open',
+    ],
+  },
+  {
+    title: 'Products and stock',
+    permissions: ['products.view', 'products.manage', 'stock.adjust', 'purchases.manage'],
+  },
+  { title: 'Customers', permissions: ['customers.manage', 'customers.credit'] },
+  { title: 'Money', permissions: ['cash.register', 'expenses.manage', 'reports.view'] },
+  {
+    title: 'Running the shop',
+    permissions: ['settings.manage', 'users.manage', 'audit.view', 'backups.manage'],
+  },
 ];
 
 /** What a user can really do: Super Admin everything, Admin everything but branding. */

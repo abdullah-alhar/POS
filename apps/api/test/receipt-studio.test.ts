@@ -80,7 +80,6 @@ describe('receipt design pieces', () => {
         showSku: false,
         showDiscounts: false,
         showWarranty: false,
-        showSerial: false,
         numbered: true,
       },
       { id: 's', type: 'signature', label: 'Received by' },

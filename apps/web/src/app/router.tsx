@@ -49,7 +49,7 @@ export const router = createBrowserRouter([
           },
           { path: 'billing', element: <BillingPage />, handle: { fullBleed: true } },
           {
-            element: <RequirePermission permission="sales.create" />,
+            element: <RequirePermission permission="sales.view" />,
             children: [{ path: 'sales', element: <SalesPage /> }],
           },
           {
