@@ -96,7 +96,7 @@ export class ReportsService {
     const [sales, returns, returnCost, expenses] = await Promise.all([
       this.prisma.$queryRaw<Record<string, unknown>[]>`
         SELECT ${bucket('s."createdAt"')} AS period, count(*) AS bills, sum(s."total") AS sales,
-               sum(s."itemDiscountTotal" + s."billDiscountAmount") AS discounts,
+               sum(s."itemDiscountTotal"::bigint + s."billDiscountAmount") AS discounts,
                sum(s."taxTotal") AS tax, sum(s."costTotal") AS cost
         FROM "Sale" s
         WHERE s."status" = 'COMPLETED' AND s."createdAt" >= ${start} AND s."createdAt" < ${end}
@@ -108,7 +108,7 @@ export class ReportsService {
         GROUP BY 1`,
       // Items put back on the shelf give their cost back; damaged ones stay a loss.
       this.prisma.$queryRaw<Record<string, unknown>[]>`
-        SELECT ${bucket('r."createdAt"')} AS period, sum(ri."qty" * si."unitCost") AS cost
+        SELECT ${bucket('r."createdAt"')} AS period, sum(ri."qty"::bigint * si."unitCost") AS cost
         FROM "SaleReturnItem" ri
         JOIN "SaleReturn" r ON r."id" = ri."returnId"
         JOIN "SaleItem" si ON si."id" = ri."saleItemId"
@@ -164,9 +164,9 @@ export class ReportsService {
     const sold = Prisma.sql`
       SELECT si."variantId",
              sum(si."qty" - si."returnedQty") AS qty,
-             sum(si."lineTotal" * (si."qty" - si."returnedQty") / si."qty") AS sales,
-             sum((si."lineTotal" - si."taxAmount") * (si."qty" - si."returnedQty") / si."qty"
-                 - (si."qty" - si."returnedQty") * si."unitCost") AS profit
+             sum(si."lineTotal"::bigint * (si."qty" - si."returnedQty") / si."qty") AS sales,
+             sum((si."lineTotal" - si."taxAmount")::bigint * (si."qty" - si."returnedQty") / si."qty"
+                 - (si."qty" - si."returnedQty")::bigint * si."unitCost") AS profit
       FROM "SaleItem" si JOIN "Sale" s ON s."id" = si."saleId"
       WHERE s."status" = 'COMPLETED' AND s."createdAt" >= ${start} AND s."createdAt" < ${end}
       GROUP BY si."variantId"`;
@@ -193,7 +193,7 @@ export class ReportsService {
             JOIN "Product" p ON p."id" = v."productId" LEFT JOIN "Category" c ON c."id" = p."categoryId"
             LEFT JOIN sold ON sold."variantId" = v."id"
             WHERE v."isActive" AND p."isActive" AND p."trackStock" AND v."stockQty" > 0
-            ORDER BY coalesce(sold.qty, 0) ASC, v."stockQty" * v."costPrice" DESC
+            ORDER BY coalesce(sold.qty, 0) ASC, v."stockQty"::bigint * v."costPrice" DESC
             LIMIT ${q.limit}`;
     return rows.map((r) => ({
       variantId: String(r.id),
@@ -246,7 +246,7 @@ export class ReportsService {
         SELECT "cashierId" AS uid,
                count(*) FILTER (WHERE "status" = 'COMPLETED') AS bills,
                coalesce(sum("total") FILTER (WHERE "status" = 'COMPLETED'), 0) AS sales,
-               coalesce(sum("itemDiscountTotal" + "billDiscountAmount") FILTER (WHERE "status" = 'COMPLETED'), 0) AS discounts,
+               coalesce(sum("itemDiscountTotal"::bigint + "billDiscountAmount") FILTER (WHERE "status" = 'COMPLETED'), 0) AS discounts,
                count(*) FILTER (WHERE "status" = 'VOIDED') AS voids
         FROM "Sale" WHERE "createdAt" >= ${start} AND "createdAt" < ${end} GROUP BY 1
       ), r AS (
