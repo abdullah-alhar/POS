@@ -100,7 +100,7 @@ export class AssistantController {
 
   /** Is an AI on, and which one? (No key, no internet needed.) */
   @Get('status')
-  @RequirePermissions('settings.manage')
+  @RequirePermissions('system.manage')
   status() {
     return this.ai.status();
   }
@@ -108,14 +108,14 @@ export class AssistantController {
   /** Try an AI with settings that are not saved yet, and optionally a key not saved yet. */
   @Post('test')
   @HttpCode(200)
-  @RequirePermissions('settings.manage')
+  @RequirePermissions('system.manage')
   test(@Body(new ZodPipe(testSchema)) body: { ai: AiSettings; key?: string }) {
     return this.ai.test(body.ai, body.key);
   }
 
   /** Save the key for an online AI service (stored encrypted, never sent back). */
   @Put('keys/:provider')
-  @RequirePermissions('settings.manage')
+  @RequirePermissions('system.manage')
   async saveKey(
     @Param('provider') id: string,
     @Body(new ZodPipe(keySchema)) body: { key: string },
@@ -126,7 +126,7 @@ export class AssistantController {
   }
 
   @Delete('keys/:provider')
-  @RequirePermissions('settings.manage')
+  @RequirePermissions('system.manage')
   async removeKey(@Param('provider') id: string, @CurrentActor() actor: Actor) {
     await this.keys.remove(provider(id), actor);
     return this.ai.status();

@@ -6,9 +6,10 @@ import {
   Logger,
   type ExceptionFilter,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type { ApiErrorBody, ErrorCode } from '@shoppos/shared';
 import { Prisma } from '../generated/prisma/client';
+import { newRef, recordProblem } from './problems';
 
 const STATUS_CODES: Partial<Record<number, ErrorCode>> = {
   400: 'BAD_REQUEST',
@@ -25,10 +26,31 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('Error');
 
   catch(exception: unknown, host: ArgumentsHost) {
-    const res = host.switchToHttp().getResponse<Response>();
+    const http = host.switchToHttp();
+    const res = http.getResponse<Response>();
+    const req = http.getRequest<Request & { user?: { username?: string } }>();
     const body = this.toBody(exception);
     if (body.statusCode >= 500) {
-      this.logger.error(exception instanceof Error ? exception.stack : String(exception));
+      // A reference to find this error again: shown to the user, logged, listed in Settings.
+      body.ref = newRef();
+      const stack =
+        exception instanceof Error ? (exception.stack ?? exception.message) : String(exception);
+      this.logger.error(
+        `[${body.ref}] ${body.code} ${req.method} ${req.originalUrl ?? req.url}: ${stack}`,
+      );
+      recordProblem({
+        ref: body.ref,
+        at: new Date().toISOString(),
+        code: body.code,
+        status: body.statusCode,
+        method: req.method,
+        path: (req.originalUrl ?? req.url ?? '').split('?')[0]!.slice(0, 200),
+        user: req.user?.username ?? null,
+        message: body.message,
+        detail: stack.split('\n').slice(0, 6).join('\n').slice(0, 1500),
+      });
+      if (body.code === 'INTERNAL' || body.code.startsWith('DB_'))
+        body.message = `${body.message} (code ${body.code}, ref ${body.ref})`;
     }
     res.status(body.statusCode).json(body);
   }
@@ -74,7 +96,35 @@ export class AllExceptionsFilter implements ExceptionFilter {
             code: 'CONFLICT',
             message: 'This record is linked to other records and cannot be changed this way',
           };
+        case 'P2021':
+        case 'P2022':
+          return {
+            statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+            code: 'DB_OUTDATED',
+            message:
+              'The database needs the latest update. Run UPDATE.cmd (or pnpm db:deploy), then try again.',
+          };
+        case 'P2024':
+          return {
+            statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+            code: 'DB_TIMEOUT',
+            message: 'The database is busy. Wait a moment and try again.',
+          };
       }
+    }
+    if (
+      exception instanceof Prisma.PrismaClientInitializationError ||
+      (exception instanceof Prisma.PrismaClientKnownRequestError &&
+        ['P1001', 'P1002', 'P1017'].includes(exception.code)) ||
+      (exception instanceof Error &&
+        /ECONNREFUSED|Can't reach database|terminating connection/i.test(exception.message))
+    ) {
+      return {
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        code: 'DB_UNAVAILABLE',
+        message:
+          'The database is not running. Restart the POS computer; if it stays, call support.',
+      };
     }
 
     return {

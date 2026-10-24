@@ -124,19 +124,25 @@ describe('checkout', () => {
     ).toBe(9);
   });
 
-  it('asks to open the day first', async () => {
+  it('starts the day by itself with the first sale', async () => {
     const users = await standardUsers(ctx);
     const v = (
       await users.adminHttp
         .post('/api/products')
-        .send({ name: 'X', variants: [{ retailPrice: 100, wholesalePrice: 100, costPrice: 1 }] })
+        .send({
+          name: 'X',
+          variants: [{ retailPrice: 100, wholesalePrice: 100, costPrice: 1, openingStock: 5 }],
+        })
         .expect(201)
     ).body.variants[0];
     const res = await users.cashierHttp
       .post('/api/sales')
       .send(bill([{ variantId: v.id, qty: 1, listPrice: 100, unitPrice: 100 }], 100))
-      .expect(409);
-    expect(res.body.code).toBe('DAY_NOT_OPEN');
+      .expect(201);
+    expect(res.body.sale.number).toMatch(/^INV-/);
+    const day = (await users.adminHttp.get('/api/cash-sessions/current').expect(200)).body.session;
+    expect(day).toMatchObject({ openingCash: 0, openedBy: { fullName: expect.any(String) } });
+    expect(await ctx.prisma.auditLog.count({ where: { action: 'DAY_OPEN' } })).toBe(1);
   });
 
   it('rejects a bill that is not fully paid, and saves nothing', async () => {

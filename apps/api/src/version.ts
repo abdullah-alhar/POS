@@ -1,2 +1,2 @@
 // Kept in sync with package.json by the release script.
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';

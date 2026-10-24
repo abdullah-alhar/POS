@@ -1,18 +1,5 @@
-import {
-  CheckCircle2,
-  FilePlus2,
-  Inbox,
-  PauseCircle,
-  Percent,
-  Printer,
-  Sunrise,
-} from 'lucide-react';
-import {
-  bpToPercentText,
-  type CartTotals,
-  type CashSessionDto,
-  type CheckoutResult,
-} from '@shoppos/shared';
+import { CheckCircle2, FilePlus2, Inbox, PauseCircle, Percent, Printer } from 'lucide-react';
+import { bpToPercentText, type CartTotals, type CheckoutResult } from '@shoppos/shared';
 import { Button } from '@/components/ui/button';
 import { useMoney } from '@/lib/queries';
 import { cn } from '@/lib/utils';
@@ -45,7 +32,6 @@ function Key({ children }: { children: React.ReactNode }) {
 
 export function TotalsPanel({
   totals,
-  session,
   heldCount,
   lastResult,
   vatRegistered,
@@ -55,11 +41,9 @@ export function TotalsPanel({
   onRecall,
   onNew,
   onReprint,
-  onOpenDay,
   payment,
 }: {
   totals: CartTotals;
-  session: CashSessionDto | null | undefined;
   heldCount: number;
   lastResult: CheckoutResult | null;
   vatRegistered: boolean;
@@ -69,7 +53,6 @@ export function TotalsPanel({
   onRecall: () => void;
   onNew: () => void;
   onReprint: () => void;
-  onOpenDay: () => void;
   /** The payment panel, shown under the total instead of the buttons while paying. */
   payment?: React.ReactNode;
 }) {
@@ -142,16 +125,10 @@ export function TotalsPanel({
         <div className="border-t p-4">{payment}</div>
       ) : (
         <div className="space-y-2 border-t p-4">
-          {session === null ? (
-            <Button size="lg" className="h-16 w-full text-lg" onClick={onOpenDay}>
-              <Sunrise /> Open the day
-            </Button>
-          ) : (
-            <Button size="lg" className="h-16 w-full text-xl" disabled={!hasLines} onClick={onPay}>
-              Pay {hasLines && money(totals.total)}
-              <kbd className="ml-2 rounded bg-white/20 px-1.5 text-xs">F4</kbd>
-            </Button>
-          )}
+          <Button size="lg" className="h-16 w-full text-xl" disabled={!hasLines} onClick={onPay}>
+            Pay {hasLines && money(totals.total)}
+            <kbd className="ml-2 rounded bg-white/20 px-1.5 text-xs">F4</kbd>
+          </Button>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" disabled={!hasLines} onClick={onDiscount}>
               <Percent /> Discount <Key>F8</Key>

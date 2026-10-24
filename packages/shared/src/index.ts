@@ -24,3 +24,4 @@ export * from './settings-tools';
 export * from './assistant';
 export * from './ai-providers';
 export * from './ask';
+export * from './notifications';

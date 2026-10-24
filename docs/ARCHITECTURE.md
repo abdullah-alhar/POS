@@ -40,7 +40,7 @@ the same transaction.
 | Role        | Who            | Can do                                                                                                                                                                                          |
 | ----------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Super Admin | The app maker  | Everything, including **Branding** (app name, logo, colour, sidebar style, startup animation) to set the app up for each shop. Hidden from the login tiles and from the shop admin's user list. |
-| Admin       | The shop owner | Everything except branding. Cannot see, edit or create Super Admin accounts.                                                                                                                    |
+| Admin       | The shop owner | Everything except branding and system work (AI service keys, technical problems). Cannot see, edit or create Super Admin accounts.                                                              |
 | Cashier     | Shop staff     | Only the permissions the admin ticks.                                                                                                                                                           |
 
 Branding is a settings section protected by the Super Admin-only `branding.manage` permission. The web
@@ -48,6 +48,26 @@ app sets the `--brand` CSS variable from it; every accent (buttons, focus rings,
 marker, startup animation) derives from that one colour. The last brand is cached in the browser so the
 next start paints the right colour immediately. With no uploaded logo, the built-in ShopPOS
 vector logo is used (`apps/web/src/components/brand/logo-paths.ts`).
+
+`system.manage` (Super Admin only) guards the AI service setup (Settings → AI assistant, keys, test)
+and **Settings → Problems**. The Ask assistant only plans steps and opens pages the asking user may
+use (`ASK_PAGE_PERMISSION`), and the AI is told which rights the person has. Cost prices on
+`GET /products/:id` are zeroed for users without `products.manage`, `purchases.manage` or
+`reports.view`.
+
+## Errors
+
+Every API error has the shape `{ statusCode, code, message, fields?, details?, ref? }`. Server faults
+(5xx) get a 6-character `ref`, are logged with it and kept in a ring buffer of 100 shown under
+**Settings → Problems**. Database states have their own codes: `DB_OUTDATED` (a migration is missing:
+run UPDATE.cmd / `pnpm db:deploy`), `DB_UNAVAILABLE` and `DB_TIMEOUT`. The web toast shows
+`Code X · Ref Y`, so a reported problem can be found in the log.
+
+## Notifications
+
+Computed per user on request (no stored queue): stock alerts and events from the audit log, filtered
+by `Settings → Notifications` (each type: everyone who may see it / owners only / off) and by the
+permissions each type needs. A user never gets their own actions; "seen" is a timestamp per user.
 
 Every user can upload a profile photo (cropped and shrunk to 256 px in the browser, stored as a small
 data URL); admins can set photos for others. Photos are kept out of the audit log.
@@ -82,7 +102,9 @@ lookup. The server still checks prices and stock at checkout.
 4. Checks the payments (`summarizePayments()`): card/bank never more than the bill, change only from cash.
 5. Asks for admin approval for price overrides and discounts above the cashier limit. Several approvals
    can be collected and sent together (`x-approval-token: t1,t2`); none is used up unless all are present.
-6. In one transaction: needs an open day, takes the next `INV-YYYY-NNNNNN`, writes bill, items (with
+6. In one transaction: opens the day if none is open (`openDayIfNeeded`, serialised with an advisory
+   lock so two tills cannot open two days; the same happens for cash movements, cash customer
+   payments, drawer expenses and cash refunds), takes the next `INV-YYYY-NNNNNN`, writes bill, items (with
    line numbers), payments, stock decrements with `StockMovement` rows, and the audit entries. Selling
    below zero stock is refused or allowed per settings; when allowed it is written to the audit log.
 

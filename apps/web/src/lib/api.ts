@@ -10,6 +10,8 @@ export class ApiError extends Error {
   readonly code: ErrorCode;
   readonly fields?: Record<string, string>;
   readonly details?: Record<string, unknown>;
+  /** Reference of an unexpected server error (Settings → Problems). */
+  readonly ref?: string;
   /** True when the user closed the admin PIN dialog; no error toast is needed. */
   readonly cancelled: boolean;
 
@@ -19,6 +21,7 @@ export class ApiError extends Error {
     this.code = body.code;
     this.fields = body.fields;
     this.details = body.details;
+    this.ref = body.ref;
     this.cancelled = cancelled;
   }
 }
@@ -66,8 +69,8 @@ async function request<T>(
     if ((err as Error).name === 'AbortError') throw err;
     throw new ApiError({
       statusCode: 0,
-      code: 'INTERNAL',
-      message: 'Cannot reach the POS server. Check that the computer is on and try again.',
+      code: 'DB_UNAVAILABLE',
+      message: 'Cannot reach the POS server. Check that the POS computer is on and try again.',
     });
   }
 

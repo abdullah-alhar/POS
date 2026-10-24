@@ -46,6 +46,7 @@ Rules:
 - Advice ("how can I sell more?") may use data steps (best, slow, lowStock …) so the answer fits this shop.
 - No steps for small talk or general questions that need no shop data: answer them yourself in "reply" (friendly, at most 5 short sentences).
 - With steps, "reply" is one short sentence to introduce the answer.
+- Only choose steps listed under "This person may use"; for anything else say kindly that the shop owner can do it. Never explain how to do things this person may not do.
 - Write "reply" in the language of the latest question.`;
 
 export const WORDS_SYSTEM = `You are the friendly assistant inside a small shop's point-of-sale system, chatting with the shop owner or a cashier.

@@ -6,6 +6,7 @@ import {
   Module,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -44,6 +45,16 @@ export class CashRegisterController {
     @CurrentActor() actor: Actor,
   ) {
     return this.cash.open(body, actor);
+  }
+
+  /** The cash in the drawer when the day started (it opens by itself with 0). */
+  @Patch('current/opening')
+  @RequirePermissions('cash.register')
+  setOpening(
+    @Body(new ZodPipe(openCashSessionSchema)) body: OpenCashSessionInput,
+    @CurrentActor() actor: Actor,
+  ) {
+    return this.cash.setOpeningCash(body.openingCash, actor);
   }
 
   @Post('current/movements')

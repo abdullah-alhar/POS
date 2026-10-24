@@ -30,7 +30,7 @@ export function AskAiButton({ floating = false }: { floating?: boolean }) {
       type="button"
       onClick={() => openPanel('ask')}
       aria-label="Ask the AI assistant (Ctrl+J)"
-      className="ask-fab group fixed right-6 bottom-6 z-40 flex items-center gap-2 print:hidden"
+      className="ask-fab group fixed right-5 bottom-5 z-40 flex items-center gap-2 print:hidden"
     >
       <span
         className={cn(
@@ -44,7 +44,7 @@ export function AskAiButton({ floating = false }: { floating?: boolean }) {
         </kbd>
       </span>
       <span className="rounded-full shadow-[0_10px_30px_-8px_var(--glow)] transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
-        <AiOrb size={54} />
+        <AiOrb size={46} />
       </span>
     </button>
   );

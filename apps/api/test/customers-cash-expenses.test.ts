@@ -252,7 +252,19 @@ describe('cash register', () => {
     });
 
     expect((await adminHttp.get('/api/cash-sessions/current').expect(200)).body.session).toBeNull();
-    await sell(adminHttp, item.id, 1, [{ method: 'CASH', amount: 100_000 }]).expect(409);
+    // The next sale starts a new day by itself, with no opening cash.
+    await sell(adminHttp, item.id, 1, [{ method: 'CASH', amount: 100_000 }]).expect(201);
+    const next = (await adminHttp.get('/api/cash-sessions/current').expect(200)).body.session;
+    expect(next).toMatchObject({ openingCash: 0 });
+    expect(next.id).not.toBe(closed.id);
+    // The opening cash can be set afterwards.
+    await adminHttp
+      .patch('/api/cash-sessions/current/opening')
+      .send({ openingCash: 500_000 })
+      .expect(200);
+    expect(
+      (await adminHttp.get('/api/cash-sessions/current').expect(200)).body.session.openingCash,
+    ).toBe(500_000);
     const report = (await adminHttp.get(`/api/cash-sessions/${closed.id}/receipt`).expect(200))
       .body;
     expect(report.blocks).toContainEqual(expect.objectContaining({ left: 'SHORT' }));

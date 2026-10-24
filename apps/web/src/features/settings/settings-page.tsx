@@ -10,57 +10,68 @@ import { AiForm } from './ai-form';
 import { BrandingForm } from './branding-form';
 import { PrinterForm } from './printer-form';
 import { ReceiptCard } from './receipt-card';
-import { AppearanceCard, ApprovalsForm, PosForm, ShopForm } from './section-forms';
+import {
+  AppearanceCard,
+  ApprovalsForm,
+  NotificationsForm,
+  PosForm,
+  ShopForm,
+} from './section-forms';
 import { SettingsHistory } from './settings-history';
 import { Overview } from './settings-overview';
-import { GROUPS, PAGES, SEARCH, type PageId } from './settings-pages';
+import { GROUPS, pagesFor, SEARCH, type PageId } from './settings-pages';
+import { SettingsProblems } from './settings-problems';
 import { SettingsTransfer } from './settings-transfer';
 
 export function SettingsPage() {
   const { data: settings } = useSettings();
-  const canBrand = useCan()('branding.manage');
+  const can = useCan();
+  const canBrand = can('branding.manage');
   const [params, setParams] = useSearchParams();
-  const page = (PAGES.find((p) => p.id === params.get('s'))?.id ?? 'overview') as PageId;
+  const pages = pagesFor(can);
+  const page = (pages.find((p) => p.id === params.get('s'))?.id ?? 'overview') as PageId;
   const go = (id: PageId) => setParams(id === 'overview' ? {} : { s: id }, { replace: false });
   if (!settings) return <FullScreenLoader />;
 
-  const current = PAGES.find((p) => p.id === page)!;
+  const current = pages.find((p) => p.id === page)!;
   return (
     <>
       <PageHeader
         title="Settings"
         description="Set these once; the shop then runs by itself."
-        actions={<SettingsSearch onGo={go} />}
+        actions={<SettingsSearch onGo={go} pages={pages} />}
       />
       <div className="grid items-start gap-6 lg:grid-cols-[232px_minmax(0,1fr)]">
         <nav className="grid gap-4 lg:sticky lg:top-4" aria-label="Settings sections">
-          {GROUPS.map((group) => (
+          {GROUPS.filter((g) => pages.some((p) => p.group === g)).map((group) => (
             <div key={group || 'start'} className="grid gap-0.5">
               {group && (
                 <p className="text-muted-foreground px-3 pb-1 text-[11px] font-semibold tracking-wider uppercase">
                   {group}
                 </p>
               )}
-              {PAGES.filter((p) => p.group === group).map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => go(p.id)}
-                  aria-current={page === p.id ? 'page' : undefined}
-                  className={cn(
-                    'relative flex h-9 items-center gap-2.5 rounded-lg px-3 text-left text-sm transition-colors',
-                    page === p.id
-                      ? 'bg-card text-foreground font-medium shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                      : 'text-muted-foreground hover:bg-card/70 hover:text-foreground',
-                  )}
-                >
-                  {page === p.id && (
-                    <span className="bg-brand absolute inset-y-2 left-0 w-0.5 rounded-full" />
-                  )}
-                  <p.icon className={cn('size-4 shrink-0', page === p.id && 'text-brand')} />
-                  <span className="truncate">{p.label}</span>
-                </button>
-              ))}
+              {pages
+                .filter((p) => p.group === group)
+                .map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => go(p.id)}
+                    aria-current={page === p.id ? 'page' : undefined}
+                    className={cn(
+                      'relative flex h-9 items-center gap-2.5 rounded-lg px-3 text-left text-sm transition-colors',
+                      page === p.id
+                        ? 'bg-card text-foreground font-medium shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                        : 'text-muted-foreground hover:bg-card/70 hover:text-foreground',
+                    )}
+                  >
+                    {page === p.id && (
+                      <span className="bg-brand absolute inset-y-2 left-0 w-0.5 rounded-full" />
+                    )}
+                    <p.icon className={cn('size-4 shrink-0', page === p.id && 'text-brand')} />
+                    <span className="truncate">{p.label}</span>
+                  </button>
+                ))}
             </div>
           ))}
         </nav>
@@ -80,7 +91,7 @@ export function SettingsPage() {
             </div>
           )}
           {page === 'overview' ? (
-            <Overview settings={settings} onGo={go} />
+            <Overview settings={settings} onGo={go} pages={pages} />
           ) : (
             <div className="grid max-w-4xl gap-5">
               {page === 'shop' && <ShopForm settings={settings} />}
@@ -95,8 +106,10 @@ export function SettingsPage() {
                 </>
               )}
               {page === 'assistant' && <AiForm settings={settings} />}
+              {page === 'notifications' && <NotificationsForm settings={settings} />}
               {page === 'history' && <SettingsHistory settings={settings} />}
               {page === 'copy' && <SettingsTransfer settings={settings} />}
+              {page === 'problems' && <SettingsProblems />}
             </div>
           )}
         </div>
@@ -106,7 +119,13 @@ export function SettingsPage() {
 }
 
 /** "Rounding" → Billing. Type to find any setting. */
-function SettingsSearch({ onGo }: { onGo: (page: PageId) => void }) {
+function SettingsSearch({
+  onGo,
+  pages,
+}: {
+  onGo: (page: PageId) => void;
+  pages: ReturnType<typeof pagesFor>;
+}) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -114,10 +133,10 @@ function SettingsSearch({ onGo }: { onGo: (page: PageId) => void }) {
   const results = useMemo(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     if (!words.length) return [];
-    return SEARCH.filter((s) =>
-      words.every((w) => `${s.label} ${s.words}`.toLowerCase().includes(w)),
-    ).slice(0, 8);
-  }, [q]);
+    return SEARCH.filter((s) => pages.some((p) => p.id === s.page))
+      .filter((s) => words.every((w) => `${s.label} ${s.words}`.toLowerCase().includes(w)))
+      .slice(0, 8);
+  }, [q, pages]);
   const pick = (page: PageId) => {
     onGo(page);
     setQ('');
@@ -161,7 +180,7 @@ function SettingsSearch({ onGo }: { onGo: (page: PageId) => void }) {
             </li>
           ) : (
             results.map((r, i) => {
-              const page = PAGES.find((p) => p.id === r.page)!;
+              const page = pages.find((p) => p.id === r.page)!;
               return (
                 <li key={`${r.page}-${r.label}`}>
                   <button

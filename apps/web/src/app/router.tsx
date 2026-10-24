@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
 import { AuditPage } from '@/features/audit/audit-page';
 import { LoginPage } from '@/features/auth/login-page';
 import { BackupsPage } from '@/features/backups/backups-page';
@@ -9,7 +9,6 @@ import { CashPage } from '@/features/cash/cash-page';
 import { CatalogPage } from '@/features/catalog/catalog-page';
 import { CustomerDetailPage, CustomersPage } from '@/features/customers/customers-page';
 import { ExpensesPage } from '@/features/expenses/expenses-page';
-import { StockPage } from '@/features/inventory/stock-page';
 import { LabelsPage } from '@/features/labels/labels-page';
 import { PurchaseEditorPage, PurchasesPage } from '@/features/purchases/purchases-page';
 import { SuppliersPage } from '@/features/purchases/suppliers-page';
@@ -47,7 +46,10 @@ export const router = createBrowserRouter([
             element: <RequirePermission permission="backups.manage" />,
             children: [{ path: 'backups', element: <BackupsPage /> }],
           },
-          { path: 'billing', element: <BillingPage />, handle: { fullBleed: true } },
+          {
+            element: <RequirePermission permission="sales.create" />,
+            children: [{ path: 'billing', element: <BillingPage />, handle: { fullBleed: true } }],
+          },
           {
             element: <RequirePermission permission="sales.view" />,
             children: [{ path: 'sales', element: <SalesPage /> }],
@@ -88,7 +90,8 @@ export const router = createBrowserRouter([
               { path: 'products', element: <ProductsPage /> },
               { path: 'products/:id', element: <ProductEditorPage /> },
               { path: 'catalog', element: <CatalogPage /> },
-              { path: 'stock', element: <StockPage /> },
+              // Stock lives with the products now (low stock filter, Stock and Adjust buttons).
+              { path: 'stock', element: <Navigate to="/products?low=1" replace /> },
               { path: 'labels', element: <LabelsPage /> },
             ],
           },

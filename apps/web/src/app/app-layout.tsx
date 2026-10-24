@@ -204,24 +204,26 @@ function SectionTabs() {
   const pages = item?.pages.filter((p) => !p.permission || can(p.permission)) ?? [];
   if (pages.length < 2) return null;
   return (
-    <div className="bg-muted mb-5 inline-flex flex-wrap gap-1 rounded-lg p-1">
-      {pages.map((p) => (
-        <NavLink
-          key={p.to}
-          to={p.to}
-          className={({ isActive }) =>
-            cn(
-              'rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors',
-              isActive || pageMatches(p, pathname)
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )
-          }
-        >
-          {p.label}
-        </NavLink>
-      ))}
-    </div>
+    <nav aria-label="Section" className="mb-5">
+      <div className="bg-muted inline-flex flex-wrap gap-1 rounded-lg p-1">
+        {pages.map((p) => (
+          <NavLink
+            key={p.to}
+            to={p.to}
+            className={({ isActive }) =>
+              cn(
+                'rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors',
+                isActive || pageMatches(p, pathname)
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )
+            }
+          >
+            {p.label}
+          </NavLink>
+        ))}
+      </div>
+    </nav>
   );
 }
 

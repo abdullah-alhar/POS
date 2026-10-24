@@ -1,7 +1,8 @@
 import { Controller, Get, HttpCode, HttpStatus, Logger, Module, Post } from '@nestjs/common';
 import { isAdminRole } from '@shoppos/shared';
 import { AppException } from '../../common/app-exception';
-import { CurrentActor, Public, type Actor } from '../../common/decorators';
+import { CurrentActor, Public, RequirePermissions, type Actor } from '../../common/decorators';
+import { recentProblems } from '../../common/problems';
 import { runPowerShell } from '../../common/powershell';
 import { PrismaService } from '../../prisma/prisma.service';
 import { APP_VERSION } from '../../version';
@@ -44,6 +45,13 @@ export class SystemController {
       version: APP_VERSION,
       time: new Date(),
     };
+  }
+
+  /** The last unexpected errors with their references (Settings → Problems). */
+  @Get('system/problems')
+  @RequirePermissions('system.manage')
+  problems() {
+    return recentProblems();
   }
 
   /**

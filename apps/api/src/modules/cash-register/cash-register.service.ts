@@ -12,6 +12,7 @@ import { AppException, badRequest, conflict, notFound } from '../../common/app-e
 import type { Actor } from '../../common/decorators';
 import { PrismaService, type Tx } from '../../prisma/prisma.service';
 import type { CashSession, Prisma, User } from '../../generated/prisma/client';
+import { openDayIfNeeded } from './auto-open';
 import { AuditService } from '../audit/audit.service';
 import { ApprovalsService } from '../auth/approvals.service';
 
@@ -31,7 +32,7 @@ const notOpen = () =>
   new AppException(
     HttpStatus.CONFLICT,
     'DAY_NOT_OPEN',
-    'The day is not open yet. Count the cash in the drawer and open the day first.',
+    'There is no day to close yet: the day starts by itself with the first sale.',
   );
 
 /** Listeners called after a day is closed (the backup service starts a backup). */
@@ -92,6 +93,32 @@ export class CashRegisterService {
         tx,
       );
       return toCashSessionDto(session);
+    });
+  }
+
+  /**
+   * The cash that was in the drawer when the day started (the day opens by itself at the first
+   * sale, with 0). Can be set while the day is open; written in the audit log.
+   */
+  async setOpeningCash(openingCash: number, actor: Actor): Promise<CashSessionDto> {
+    return this.prisma.$transaction(async (tx) => {
+      const session = await openDayIfNeeded(tx, actor.user.id);
+      const updated = await tx.cashSession.update({
+        where: { id: session.id },
+        data: { openingCash },
+        include: { openedBy: { select: { id: true, fullName: true } } },
+      });
+      await this.audit.log(
+        {
+          action: 'DAY_OPEN',
+          userId: actor.user.id,
+          entityType: 'CashSession',
+          entityId: session.id,
+          summary: `Opening cash set to ${formatMoney(openingCash, { showCents: true })} (was ${formatMoney(session.openingCash, { showCents: true })})`,
+        },
+        tx,
+      );
+      return toCashSessionDto(updated);
     });
   }
 
@@ -219,7 +246,7 @@ export class CashRegisterService {
           )
         : null;
     const sessionId = await this.prisma.$transaction(async (tx) => {
-      const session = await this.requireOpen(tx);
+      const session = await openDayIfNeeded(tx, actor.user.id);
       await tx.cashMovement.create({
         data: {
           sessionId: session.id,

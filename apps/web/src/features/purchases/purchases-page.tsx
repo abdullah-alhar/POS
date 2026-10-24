@@ -12,7 +12,13 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
-import type { Page, PosIndexItem, PurchaseDto, PurchaseListItem } from '@shoppos/shared';
+import type {
+  Page,
+  PosIndexItem,
+  ProductDto,
+  PurchaseDto,
+  PurchaseListItem,
+} from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { FormField } from '@/components/form-field';
@@ -258,6 +264,23 @@ function PurchaseEditor({ purchase }: { purchase: PurchaseDto | null }) {
   });
 
   function addItem(item: PosIndexItem) {
+    if (!lines.some((l) => l.variantId === item.variantId)) {
+      // Start the cost at what was paid last time; the supplier's invoice may say otherwise.
+      api
+        .get<ProductDto>(`/products/${item.productId}`)
+        .then((p) => {
+          const cost = p.variants.find((v) => v.id === item.variantId)?.costPrice;
+          if (!cost) return;
+          setLines((ls) =>
+            ls.map((l) =>
+              l.variantId === item.variantId && !Number.isFinite(l.unitCost)
+                ? { ...l, unitCost: cost }
+                : l,
+            ),
+          );
+        })
+        .catch(() => {});
+    }
     setLines((ls) =>
       ls.some((l) => l.variantId === item.variantId)
         ? ls.map((l) =>
@@ -433,7 +456,7 @@ function PurchaseEditor({ purchase }: { purchase: PurchaseDto | null }) {
                 </Link>
               )}
             </FormField>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-[1fr_auto] gap-3">
               <FormField label="Invoice no.">
                 <Input
                   value={invoiceNo}
@@ -447,6 +470,7 @@ function PurchaseEditor({ purchase }: { purchase: PurchaseDto | null }) {
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
                   disabled={!editable}
+                  className="w-40"
                 />
               </FormField>
             </div>

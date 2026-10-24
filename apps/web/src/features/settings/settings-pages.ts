@@ -1,4 +1,6 @@
 import {
+  Bell,
+  Bug,
   FileDown,
   History,
   LayoutGrid,
@@ -11,7 +13,7 @@ import {
   Store,
   type LucideIcon,
 } from 'lucide-react';
-import type { SettingsIssue } from '@shoppos/shared';
+import type { Permission, SettingsIssue } from '@shoppos/shared';
 
 /** The pages of Settings, how they are grouped, and what the search box finds on them. */
 
@@ -24,8 +26,10 @@ export type PageId =
   | 'approvals'
   | 'look'
   | 'assistant'
+  | 'notifications'
   | 'history'
-  | 'copy';
+  | 'copy'
+  | 'problems';
 
 export const PAGES: {
   id: PageId;
@@ -35,6 +39,8 @@ export const PAGES: {
   group: string;
   /** Icon tile colour on the overview. */
   tone: string;
+  /** Only for people with this permission (otherwise settings.manage, needed for Settings). */
+  permission?: Permission;
 }[] = [
   {
     id: 'overview',
@@ -94,11 +100,20 @@ export const PAGES: {
   },
   {
     id: 'assistant',
+    permission: 'system.manage',
     label: 'AI assistant',
     icon: Sparkles,
     hint: 'Free AI: Groq, Gemini …',
     group: 'App',
     tone: 'bg-indigo-500/12 text-indigo-600',
+  },
+  {
+    id: 'notifications',
+    label: 'Notifications',
+    icon: Bell,
+    hint: 'Who gets which notification',
+    group: 'App',
+    tone: 'bg-yellow-500/12 text-yellow-700',
   },
   {
     id: 'history',
@@ -115,6 +130,15 @@ export const PAGES: {
     hint: 'Save to or open a file',
     group: 'Tools',
     tone: 'bg-orange-500/12 text-orange-600',
+  },
+  {
+    id: 'problems',
+    permission: 'system.manage',
+    label: 'Problems',
+    icon: Bug,
+    hint: 'Errors with their code and reference',
+    group: 'Tools',
+    tone: 'bg-red-500/12 text-red-600',
   },
 ];
 export const GROUPS = [...new Set(PAGES.map((p) => p.group))];
@@ -178,6 +202,16 @@ export const SEARCH: { page: PageId; label: string; words: string }[] = [
     words: 'history compare undo restore version changes audit who',
   },
   {
+    page: 'notifications',
+    label: 'Notifications (who gets what)',
+    words: 'notification bell alert staff owner low stock void message',
+  },
+  {
+    page: 'problems',
+    label: 'Problems and error codes',
+    words: 'problem error crash ref reference code bug support log',
+  },
+  {
     page: 'copy',
     label: 'Save / open settings file',
     words: 'export import file backup copy transfer second shop',
@@ -196,4 +230,9 @@ export const ISSUE_PAGE: Record<SettingsIssue['section'], PageId> = {
   backup: 'copy',
   branding: 'look',
   ai: 'assistant',
+  notifications: 'notifications',
 };
+
+/** The pages this person may use. */
+export const pagesFor = (can: (p: Permission) => boolean) =>
+  PAGES.filter((p) => !p.permission || can(p.permission));

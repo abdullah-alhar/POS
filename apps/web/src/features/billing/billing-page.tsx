@@ -28,15 +28,14 @@ import { CustomerChip, CustomerDialog } from './customer-dialog';
 import { beep } from './feedback';
 import { HoldDialog, RecallDialog, useHeldBills } from './held-bills-dialog';
 import { LineDialog } from './line-dialog';
-import { cashSessionKey, OpenDayDialog } from './open-day-dialog';
+import { cashSessionKey } from '../cash/opening-cash-dialog';
 import { PAYMENT_PANEL, PaymentPanel } from './payment-panel';
 import { ScanBox, type ScanBoxHandle } from './scan-box';
 import { TotalsPanel } from './totals-panel';
 import { useCartTotals } from './use-cart-totals';
 import { usePosIndex } from './use-pos-index';
 
-type DialogName =
-  'pay' | 'discount' | 'hold' | 'recall' | 'openDay' | 'newBill' | 'customer' | null;
+type DialogName = 'pay' | 'discount' | 'hold' | 'recall' | 'newBill' | 'customer' | null;
 
 /** Clicking these does not send the focus back to the scan box (e.g. the price on a line). */
 const KEEPS_FOCUS = 'input, textarea, select, [data-keep-focus]';
@@ -156,7 +155,7 @@ export function BillingPage() {
   const actions = {
     pay() {
       if (!useCart.getState().lines.length) return;
-      setDialog(session === null ? 'openDay' : 'pay');
+      setDialog('pay');
     },
     discount() {
       if (useCart.getState().lines.length) setDialog('discount');
@@ -268,6 +267,7 @@ export function BillingPage() {
       for (const w of result.warnings) toast.warning(w, { duration: 8000 });
       void qc.invalidateQueries({ queryKey: keys.posIndex });
       void qc.invalidateQueries({ queryKey: ['notifications'] });
+      void qc.invalidateQueries({ queryKey: cashSessionKey });
 
       if (settings?.pos.autoPrintReceipt ?? true) {
         const hasCash = payments.some((p) => p.method === 'CASH');
@@ -287,10 +287,7 @@ export function BillingPage() {
         return false;
       }
       if (err.cancelled) return false;
-      if (err.code === 'DAY_NOT_OPEN') {
-        setDialog('openDay');
-        toast.error(err.message);
-      } else if (err.code === 'PRICE_CHANGED') {
+      if (err.code === 'PRICE_CHANGED') {
         const fresh = (await refetchCatalog()).data as PosIndex | undefined;
         if (fresh)
           useCart.getState().syncPrices((id) => fresh.items.find((i) => i.variantId === id));
@@ -473,18 +470,17 @@ export function BillingPage() {
             </span>
           ))}
           <span className="ml-auto whitespace-nowrap">
-            {session === null ? (
-              <span className="text-destructive font-medium">Day not open</span>
-            ) : session ? (
-              `Day open since ${new Date(session.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            ) : null}
+            {session === null
+              ? 'The day starts with the first sale'
+              : session
+                ? `Day open since ${new Date(session.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : null}
           </span>
         </footer>
       </section>
 
       <TotalsPanel
         totals={totals}
-        session={session}
         heldCount={held.length}
         lastResult={lineCount ? null : lastResult}
         vatRegistered={settings?.tax.vatRegistered ?? false}
@@ -494,7 +490,6 @@ export function BillingPage() {
         onRecall={actions.recall}
         onNew={actions.newBill}
         onReprint={actions.reprint}
-        onOpenDay={() => setDialog('openDay')}
         payment={
           dialog === 'pay' && lineCount > 0 ? (
             <PaymentPanel
@@ -526,7 +521,6 @@ export function BillingPage() {
       <BillDiscountDialog open={dialog === 'discount'} onClose={close} />
       <HoldDialog open={dialog === 'hold'} onClose={close} />
       <RecallDialog open={dialog === 'recall'} onClose={close} catalog={catalog} />
-      <OpenDayDialog open={dialog === 'openDay'} onClose={close} />
       <QtyDialog
         lineKey={qtyKey}
         onClose={() => {

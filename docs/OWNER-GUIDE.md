@@ -1,19 +1,21 @@
 # ShopPOS: owner's guide
 
 **The menu on the left has 9 entries:** Home, Billing, Sales, Customers, Products, Purchases, Cash,
-Reports and Settings. Some have tabs at the top (for example **Products** has Products · Stock ·
-Barcode labels · Categories & brands).
+Reports and Settings. Some have tabs at the top (for example **Products** has Products · Barcode
+labels · Categories & brands).
 
 This guide is for the shop owner. It explains the daily routine and what to do when something goes
 wrong. ShopPOS runs on the shop laptop and works without internet.
 
 ## Every day
 
-### Morning: open the day
+### Morning: start selling
 
 1. Turn on the laptop. ShopPOS opens by itself (full screen).
 2. Tap your name and type your PIN.
-3. Go to **Billing**. Press **Open the day** and type the cash that is in the drawer.
+3. Go to **Billing** and sell. There is no "open the day" step: the day starts by itself with the
+   first sale or cash movement. If the drawer starts with change in it, go to **Cash** and press
+   **Set the opening cash** (any time during the day).
 
 ### Selling
 
@@ -81,7 +83,13 @@ items out of stock or running low, a day left open from an earlier day, no backu
 and, for the owner, what others did that matters (voids, returns, sales without stock, price
 changes, big discounts, the drawer opened, wrong passwords). New ones also pop up for a few
 seconds. Click one to open the right page; opening the bell marks everything as read. Each
-person only sees what they are allowed to see.
+person only sees what they are allowed to see, and never their own actions.
+
+**Who gets which notification:** **Settings → Notifications** has one line per kind (out of stock,
+running low, day left open, backups, voids, returns, price changes, the drawer, stock changes,
+security). Choose **Everyone who may see it**, **Owners only** or **Off** for each. "Everyone who
+may see it" still respects the user's rights: for example only people who buy stock or count it
+get "running low".
 
 ## Customers and credit
 
@@ -101,15 +109,18 @@ put back in stock). Choose how the money is given back.
 ## Stock and purchases
 
 - **Products**: add and edit items, prices and barcodes. Each product in the list has **Edit**
-  and **Stock** (count it, or add / remove items) buttons; the product page also has **Adjust**
+  and **Stock** (count it, or add / remove items) buttons, and **Stock count** at the top counts
+  several items at once; the product page also has **Adjust**
   next to each stock number, and its stock history underneath. **Import** reads an Excel or CSV
   list. Set the **Warranty** (7 days … 3 years); it is printed on the receipt with its end date.
 - **Variants are optional.** A simple product has one line: price and stock. Press **Add a variant
   (colour, size …)** only when it comes in several; **Duplicate** on a line copies its prices to a
   new line, so you only type the name and stock.
-- **Purchases → New purchase** when stock arrives. **Receive into stock** adds the items and
-  updates the cost price. What you owe the supplier is shown under **Suppliers**.
-- **Products → Stock**: items running low, the history of every item, and stock counts (adjustments).
+- **Purchases → New purchase** when stock arrives. Each item starts at the cost you paid last
+  time; change it if the invoice says otherwise. **Receive into stock** adds the items and updates
+  the cost price. What you owe the supplier is shown under **Suppliers**.
+- **Running low**: Home → **Stock alerts** (or the bell) opens the product list filtered to the
+  items that need buying. The old **Stock** tab is now part of **Products**.
 - **Products → Barcode labels**: print sticker sheets for items without a barcode.
 
 ## Designing the receipt (Receipt Studio)
@@ -198,7 +209,8 @@ unless you allow it.
 
 ## Free AI (optional)
 
-**Settings → AI assistant** offers three choices:
+**Settings → AI assistant** is set up by the **Super Admin** (the person who installed ShopPOS);
+the shop owner and staff use the assistant but do not see the keys. It offers three choices:
 
 - **Built-in only**: no internet needed. This is how a new shop starts.
 - **Free online AI** (recommended): any question in any language, natural answers, advice and
@@ -298,14 +310,15 @@ To open ShopPOS again, double-click **ShopPOS** on the desktop.
 
 ## When something goes wrong
 
-| Problem                                | What to do                                                                                                              |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| ShopPOS does not open after starting   | Wait one minute, then double-click **ShopPOS** on the desktop                                                           |
-| "The receipt printer did not answer"   | Check the printer is on and has paper. The receipt prints with the browser instead. **Settings → Printer → Test print** |
-| The drawer does not open               | Check the drawer cable goes into the printer. **Settings → Printer → Open drawer** to test                              |
-| The scanner types into the wrong place | Press **F2** (search box) and scan again                                                                                |
-| Forgot a PIN                           | The owner resets it under **Settings → Users**. The Super Admin can reset the owner's                                   |
-| "The day is not open"                  | **Billing → Open the day**                                                                                              |
+| Problem                                 | What to do                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| ShopPOS does not open after starting    | Wait one minute, then double-click **ShopPOS** on the desktop                                                           |
+| "The receipt printer did not answer"    | Check the printer is on and has paper. The receipt prints with the browser instead. **Settings → Printer → Test print** |
+| The drawer does not open                | Check the drawer cable goes into the printer. **Settings → Printer → Open drawer** to test                              |
+| The scanner types into the wrong place  | Press **F2** (search box) and scan again                                                                                |
+| Forgot a PIN                            | The owner resets it under **Settings → Users**. The Super Admin can reset the owner's                                   |
+| A red message with **Code** and **Ref** | Tell the person who set up the POS both. They find the details under **Settings → Problems** (Super Admin)              |
+| "The database needs the latest update"  | Run **UPDATE.cmd** again (or `pnpm db:deploy`); the data is kept                                                        |
 
 Logs for the person who set up the POS: `C:\ShopPOS\logs`.
 

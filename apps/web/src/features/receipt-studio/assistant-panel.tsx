@@ -5,6 +5,7 @@ import {
   type ReceiptAction,
 } from '@shoppos/shared';
 import { api } from '@/lib/api';
+import { useCan } from '@/lib/auth';
 import { AssistantChat, type AssistantTurn } from '../assistant/assistant-chat';
 import { currentDesign, useStudio } from './store';
 
@@ -17,6 +18,7 @@ interface Answer {
 
 /** Ask for changes in plain words; each answer is one history step (and can be undone). */
 export function AssistantPanel({ inputRef }: { inputRef?: RefObject<HTMLTextAreaElement | null> }) {
+  const canSetUpAi = useCan()('system.manage');
   async function send(message: string): Promise<AssistantTurn> {
     const design = currentDesign();
     const { selected } = useStudio.getState();
@@ -71,6 +73,7 @@ export function AssistantPanel({ inputRef }: { inputRef?: RefObject<HTMLTextArea
 
   return (
     <AssistantChat
+      showStatus={canSetUpAi}
       intro="Tell me how the receipt should look."
       examples={RECEIPT_ASSISTANT_EXAMPLES}
       send={send}

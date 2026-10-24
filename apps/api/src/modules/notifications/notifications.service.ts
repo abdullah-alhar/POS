@@ -1,8 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { hasPermission, type NotificationDto, type NotificationsDto } from '@shoppos/shared';
+import {
+  hasPermission,
+  isAdminRole,
+  NOTIFICATION_TYPES,
+  type NotificationDto,
+  type NotificationsDto,
+  type NotificationType,
+} from '@shoppos/shared';
 import type { Actor } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { SettingsService } from '../settings/settings.service';
 
 const DAY = 86_400_000;
 /** A backup older than this is worth a reminder. */
@@ -11,31 +19,90 @@ const BACKUP_DUE = 2 * DAY;
 const EVENT_DAYS = 7;
 
 /** Audit events an owner wants to hear about, with how serious they are and where to look. */
-const EVENTS: Record<string, { level: NotificationDto['level']; title: string; link: string }> = {
-  SALE_VOID: { level: 'danger', title: 'A bill was voided', link: '/sales' },
-  SALE_RETURN: { level: 'warning', title: 'A return was taken', link: '/returns' },
-  SALE_NO_STOCK: { level: 'warning', title: 'Sold without stock', link: '/stock' },
-  PRICE_CHANGE: { level: 'info', title: 'A price was changed on a bill', link: '/audit' },
-  LARGE_DISCOUNT: { level: 'info', title: 'A big discount was given', link: '/audit' },
-  CREDIT_LIMIT: { level: 'warning', title: 'Sold above a credit limit', link: '/customers' },
-  DRAWER_OPEN: { level: 'info', title: 'The cash drawer was opened', link: '/audit' },
-  STOCK_ADJUST: { level: 'info', title: 'Stock was adjusted', link: '/stock' },
-  APPROVAL_DENIED: { level: 'warning', title: 'An approval was refused', link: '/audit' },
-  LOGIN_FAILED: { level: 'warning', title: 'A wrong password or PIN was typed', link: '/audit' },
-  BACKUP_RESTORE: { level: 'danger', title: 'A backup was restored', link: '/backups' },
+const EVENTS: Record<
+  string,
+  { type: NotificationType; level: NotificationDto['level']; title: string; link: string }
+> = {
+  SALE_VOID: { type: 'voids', level: 'danger', title: 'A bill was voided', link: '/sales' },
+  SALE_RETURN: { type: 'returns', level: 'warning', title: 'A return was taken', link: '/returns' },
+  SALE_NO_STOCK: {
+    type: 'noStockSales',
+    level: 'warning',
+    title: 'Sold without stock',
+    link: '/products?low=1',
+  },
+  PRICE_CHANGE: {
+    type: 'priceChanges',
+    level: 'info',
+    title: 'A price was changed on a bill',
+    link: '/audit',
+  },
+  LARGE_DISCOUNT: {
+    type: 'priceChanges',
+    level: 'info',
+    title: 'A big discount was given',
+    link: '/audit',
+  },
+  CREDIT_LIMIT: {
+    type: 'cashDrawer',
+    level: 'warning',
+    title: 'Sold above a credit limit',
+    link: '/customers',
+  },
+  DRAWER_OPEN: {
+    type: 'cashDrawer',
+    level: 'info',
+    title: 'The cash drawer was opened',
+    link: '/audit',
+  },
+  STOCK_ADJUST: {
+    type: 'stockChanges',
+    level: 'info',
+    title: 'Stock was adjusted',
+    link: '/products',
+  },
+  APPROVAL_DENIED: {
+    type: 'security',
+    level: 'warning',
+    title: 'An approval was refused',
+    link: '/audit',
+  },
+  LOGIN_FAILED: {
+    type: 'security',
+    level: 'warning',
+    title: 'A wrong password or PIN was typed',
+    link: '/audit',
+  },
+  BACKUP_RESTORE: {
+    type: 'security',
+    level: 'danger',
+    title: 'A backup was restored',
+    link: '/backups',
+  },
 };
 
 /**
- * The bell: things to fix now (stock out or low, a day left open, no recent backup) and, for
- * owners, what others did that matters (voids, returns, sales without stock …). Each user sees
- * only what their permissions allow; "read" is everything before they last opened the bell.
+ * The bell: things to fix now (stock out or low, a day left open, no recent backup) and what
+ * others did that matters (voids, returns, sales without stock …). Each kind goes to the people
+ * chosen in Settings → Notifications and who need it (low stock to whoever orders or counts
+ * stock …). "Read" is everything before the user last opened the bell.
  */
 @Injectable()
 export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inventory: InventoryService,
+    private readonly settings: SettingsService,
   ) {}
+
+  /** Does this user get this kind of notification (Settings → Notifications, and their rights)? */
+  private wants(actor: Actor, type: NotificationType): boolean {
+    const rule = this.settings.get('notifications')[type];
+    if (rule === 'off') return false;
+    if (rule === 'owners') return isAdminRole(actor.user.role);
+    const needs = NOTIFICATION_TYPES[type].needs as readonly Parameters<typeof hasPermission>[1][];
+    return !needs.length || needs.some((p) => hasPermission(actor.user, p));
+  }
 
   async list(actor: Actor): Promise<NotificationsDto> {
     const user = await this.prisma.user.findUnique({
@@ -43,13 +110,17 @@ export class NotificationsService {
       select: { notificationsSeenAt: true },
     });
     const seen = user?.notificationsSeenAt?.getTime() ?? 0;
-    const can = (p: Parameters<typeof hasPermission>[1]) => hasPermission(actor.user, p);
+    const wants = (t: NotificationType) => this.wants(actor, t);
     const items: Omit<NotificationDto, 'unread'>[] = [];
 
-    if (can('products.view')) items.push(...(await this.stockAlerts()));
-    if (can('cash.register')) items.push(...(await this.dayAlerts()));
-    if (can('backups.manage')) items.push(...(await this.backupAlerts()));
-    if (can('audit.view')) items.push(...(await this.events(actor.user.id)));
+    if (wants('outOfStock') || wants('lowStock'))
+      items.push(...(await this.stockAlerts(wants('outOfStock'), wants('lowStock'))));
+    if (wants('dayOpen')) items.push(...(await this.dayAlerts()));
+    if (wants('backup')) items.push(...(await this.backupAlerts()));
+    const eventTypes = Object.entries(EVENTS)
+      .filter(([, e]) => wants(e.type))
+      .map(([action]) => action);
+    if (eventTypes.length) items.push(...(await this.events(actor.user.id, eventTypes)));
 
     const sorted = items
       .sort((a, b) => b.at.localeCompare(a.at))
@@ -64,7 +135,10 @@ export class NotificationsService {
     });
   }
 
-  private async stockAlerts(): Promise<Omit<NotificationDto, 'unread'>[]> {
+  private async stockAlerts(
+    showOut: boolean,
+    showLow: boolean,
+  ): Promise<Omit<NotificationDto, 'unread'>[]> {
     const low = await this.inventory.lowStock();
     if (!low.length) return [];
     // When it last changed: the newest stock movement or edit of these items.
@@ -82,7 +156,7 @@ export class NotificationsService {
         .map((i) => i.name)
         .join(', ') + (list.length > 3 ? ` and ${list.length - 3} more` : '');
     const res: Omit<NotificationDto, 'unread'>[] = [];
-    if (out.length)
+    if (showOut && out.length)
       res.push({
         id: `out-of-stock:${out.length}:${at}`,
         kind: 'alert',
@@ -90,10 +164,10 @@ export class NotificationsService {
         title: `${out.length} item${out.length === 1 ? ' is' : 's are'} out of stock`,
         detail: names(out),
         at,
-        link: '/stock',
+        link: '/products?low=1',
       });
     const running = low.filter((i) => i.stockQty > 0);
-    if (running.length)
+    if (showLow && running.length)
       res.push({
         id: `low-stock:${running.length}:${at}`,
         kind: 'alert',
@@ -101,7 +175,7 @@ export class NotificationsService {
         title: `${running.length} item${running.length === 1 ? ' is' : 's are'} running low`,
         detail: names(running),
         at,
-        link: '/stock',
+        link: '/products?low=1',
       });
     return res;
   }
@@ -150,10 +224,13 @@ export class NotificationsService {
     ];
   }
 
-  private async events(selfId: string): Promise<Omit<NotificationDto, 'unread'>[]> {
+  private async events(
+    selfId: string,
+    actions: string[],
+  ): Promise<Omit<NotificationDto, 'unread'>[]> {
     const rows = await this.prisma.auditLog.findMany({
       where: {
-        action: { in: Object.keys(EVENTS) },
+        action: { in: actions },
         createdAt: { gte: new Date(Date.now() - EVENT_DAYS * DAY) },
         OR: [{ userId: null }, { userId: { not: selfId } }],
       },

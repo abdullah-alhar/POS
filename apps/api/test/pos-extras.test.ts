@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, warrantyEnd, warrantyLabel, type ReceiptDoc } from '@shoppos/shared';
+import {
+  DEFAULT_CASHIER_PERMISSIONS,
+  DEFAULT_SETTINGS,
+  warrantyEnd,
+  warrantyLabel,
+  type ReceiptDoc,
+} from '@shoppos/shared';
 import { encodeReceipt, renderText } from '../src/modules/printing/escpos';
 import { buildSaleReceipt, sampleSale } from '../src/modules/printing/receipt-builder';
 import { SettingsService } from '../src/modules/settings/settings.service';
@@ -254,6 +260,19 @@ describe('what each user may see', () => {
       .send({ permissions: [...without, 'sales.view'] })
       .expect(200);
     await cashierHttp.get('/api/sales').expect(200);
+  });
+
+  it('shows what the shop paid only to people who buy stock or see profit', async () => {
+    const { adminHttp, cashierHttp, cashier, watch } = await shop();
+    const cost = async (http: Http) =>
+      (await http.get(`/api/products/${watch.id}`).expect(200)).body.variants[0].costPrice;
+    expect(await cost(adminHttp)).toBe(700_000);
+    expect(await cost(cashierHttp)).toBe(700_000); // may edit products
+    await adminHttp
+      .patch(`/api/users/${cashier.id}`)
+      .send({ permissions: DEFAULT_CASHIER_PERMISSIONS })
+      .expect(200);
+    expect(await cost(cashierHttp)).toBe(0);
   });
 });
 

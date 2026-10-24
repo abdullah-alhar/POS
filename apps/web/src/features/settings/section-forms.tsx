@@ -21,6 +21,10 @@ import {
   SETTINGS_SCHEMAS,
   type AllSettings,
   type SettingsSection,
+  NOTIFICATION_AUDIENCE_LABELS,
+  NOTIFICATION_AUDIENCES,
+  NOTIFICATION_TYPE_KEYS,
+  NOTIFICATION_TYPES,
 } from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FormField } from '@/components/form-field';
@@ -457,5 +461,49 @@ export function AppearanceCard() {
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+// ── Notifications ──
+
+/** Who gets which notification in the bell. */
+export function NotificationsForm({ settings }: { settings: AllSettings }) {
+  const sf = useSectionForm('notifications', settings);
+  const { form } = sf;
+  return (
+    <SectionCard
+      title="Who gets which notification"
+      description="Everyone who needs it: only the people whose work it is (low stock goes to whoever orders or counts stock, a day left open to whoever handles cash). Nobody is told about their own actions."
+      sf={sf as SectionForm}
+    >
+      <ul className="divide-y rounded-lg border">
+        {NOTIFICATION_TYPE_KEYS.map((k) => (
+          <li key={k} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{NOTIFICATION_TYPES[k].label}</p>
+              <p className="text-muted-foreground text-xs">{NOTIFICATION_TYPES[k].hint}</p>
+            </div>
+            <Controller
+              control={form.control}
+              name={k}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-52">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NOTIFICATION_AUDIENCES.map((a) => (
+                      <SelectItem key={a} value={a}>
+                        {NOTIFICATION_AUDIENCE_LABELS[a]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
   );
 }

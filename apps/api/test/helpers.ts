@@ -61,6 +61,12 @@ export async function loginAs(ctx: TestContext, username: string, password = 'se
   return agent;
 }
 
+/** The Super Admin (sets up the AI service, sees technical problems), logged in. */
+export async function superAdmin(ctx: TestContext) {
+  await createUser(ctx, { username: 'maker', role: 'SUPER_ADMIN', pin: '7777' });
+  return loginAs(ctx, 'maker');
+}
+
 /** Admin "owner" (PIN 9999) and cashier "cash" (PIN 1111) with products.manage. */
 export async function standardUsers(ctx: TestContext) {
   const admin = await createUser(ctx, { username: 'owner', role: 'ADMIN', pin: '9999' });

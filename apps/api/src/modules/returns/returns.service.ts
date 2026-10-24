@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   divRound,
   formatMoney,
@@ -10,7 +10,8 @@ import {
   type ReturnQuery,
   type SaleReturnDto,
 } from '@shoppos/shared';
-import { AppException, badRequest, conflict, notFound } from '../../common/app-exception';
+import { openDayIfNeeded } from '../cash-register/auto-open';
+import { badRequest, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { nextDocumentNumber } from '../../prisma/counters';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -148,15 +149,11 @@ export class ReturnsService {
     );
 
     const id = await this.prisma.$transaction(async (tx) => {
-      // Cash refunds come out of the drawer, so the day must be open.
-      const session = await tx.cashSession.findFirst({ where: { status: 'OPEN' } });
-      if (input.refundMethod === 'CASH' && !session) {
-        throw new AppException(
-          HttpStatus.CONFLICT,
-          'DAY_NOT_OPEN',
-          'Open the day before giving a cash refund.',
-        );
-      }
+      // Cash refunds come out of the drawer (the day starts by itself if needed).
+      const session =
+        input.refundMethod === 'CASH'
+          ? await openDayIfNeeded(tx, actor.user.id)
+          : await tx.cashSession.findFirst({ where: { status: 'OPEN' } });
       const tracked = new Set(
         (
           await tx.productVariant.findMany({

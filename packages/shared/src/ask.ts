@@ -109,8 +109,8 @@ export const ASK_PAGES: Record<string, { label: string; to: string; words: strin
     words: ['new product', 'add product', 'add item', 'add a product', 'add an item'],
   },
   stock: {
-    label: 'Stock',
-    to: '/stock',
+    label: 'Low stock',
+    to: '/products?low=1',
     words: ['stock', 'inventory', 'stock count', 'adjust stock'],
   },
   labels: {
@@ -184,6 +184,33 @@ export const ASK_PAGES: Record<string, { label: string; to: string; words: strin
 };
 const PAGE_KEYS = Object.keys(ASK_PAGES) as [string, ...string[]];
 
+/** Who may open each page (the same rules as the menu and the app's routes). */
+export const ASK_PAGE_PERMISSION: Record<string, Permission> = {
+  home: 'reports.view',
+  billing: 'sales.create',
+  sales: 'sales.view',
+  returns: 'returns.create',
+  newReturn: 'returns.create',
+  customers: 'customers.manage',
+  products: 'products.view',
+  newProduct: 'products.manage',
+  stock: 'products.view',
+  labels: 'products.view',
+  catalog: 'products.view',
+  purchases: 'purchases.manage',
+  suppliers: 'purchases.manage',
+  cash: 'cash.register',
+  expenses: 'expenses.manage',
+  reports: 'reports.view',
+  settings: 'settings.manage',
+  receipt: 'settings.manage',
+  printer: 'settings.manage',
+  ai: 'system.manage',
+  users: 'users.manage',
+  backups: 'backups.manage',
+  audit: 'audit.view',
+};
+
 /** Short how-to answers (from the owner's guide), found by their words, even offline. */
 export const HELP_TOPICS: Record<
   string,
@@ -235,16 +262,17 @@ export const HELP_TOPICS: Record<
     title: 'Closing the day',
     words: ['close', 'end of day', 'day end', 'count cash', 'z report', 'closing'],
     answer: [
-      'Home → Close the day (or Cash). Count the notes and coins and type how many of each.',
+      'Home → Close the day (or Cash). Count the cash in the drawer and type the total.',
       'The screen shows if the drawer is short or over. Press Close the day and print: the report prints and a backup is made.',
     ],
     page: 'cash',
   },
   openDay: {
-    title: 'Opening the day',
+    title: 'Starting the day',
     words: ['open the day', 'start the day', 'opening cash', 'float'],
     answer: [
-      'Billing asks for it before the first sale: type the cash in the drawer (the float) and press Open.',
+      'Nothing to do: the day starts by itself with the first sale.',
+      'To count the float, open Cash and press "Set the opening cash".',
     ],
     page: 'cash',
   },

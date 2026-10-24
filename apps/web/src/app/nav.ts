@@ -51,7 +51,6 @@ export const NAV: NavItem[] = [
     icon: Package,
     pages: [
       { to: '/products', label: 'Products', permission: 'products.view' },
-      { to: '/stock', label: 'Stock', permission: 'products.view' },
       { to: '/labels', label: 'Barcode labels', permission: 'products.view' },
       { to: '/catalog', label: 'Categories & brands', permission: 'products.view' },
     ],

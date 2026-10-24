@@ -30,7 +30,7 @@ export function qrSvg(value: string, cell = 3) {
 export function blockHtml(b: ReceiptBlock, logo: string | null): string {
   switch (b.type) {
     case 'logo':
-      return `<div class="logo"${b.align && b.align !== 'center' ? ` style="text-align:${b.align}"` : ''}>${logo ? `<img src="${logo}" alt="">` : builtInLogoSvg()}</div>`;
+      return `<div class="logo${b.align === 'left' ? ' l-left' : b.align === 'right' ? ' l-right' : ''}">${logo ? `<img src="${logo}" alt="">` : builtInLogoSvg()}</div>`;
     case 'divider':
       return `<div class="hr${b.char ? ` ${DIVIDER_CLASS[b.char]}` : ''}"></div>`;
     case 'feed':
@@ -67,7 +67,8 @@ ${s}.row { display: flex; justify-content: space-between; gap: 8px; } ${s}.row s
 ${s}.hr { border-top: 1px dashed #000; margin: 4px 0; } ${s}.hr.double { border-top-style: double; border-top-width: 3px; }
 ${s}.hr.dotted { border-top: 2px dotted #000; } ${s}.hr.stars { border: 0; height: 1.2em; overflow: hidden; white-space: nowrap; text-align: center; margin: 2px 0; }
 ${s}.hr.stars::before { content: '* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *'; }
-${s}.logo { text-align: center; margin-bottom: 4px; } ${s}.logo img, ${s}.logo svg { max-width: 60%; max-height: 22mm; }
+${s}.logo { display: flex; justify-content: center; margin-bottom: 4px; } ${s}.logo.l-left { justify-content: flex-start; } ${s}.logo.l-right { justify-content: flex-end; }
+${s}.logo img, ${s}.logo svg { display: block; max-width: 60%; max-height: 22mm; width: auto; height: auto; object-fit: contain; }
 ${s}.bc { text-align: center; margin: 6px 0 2px; font-size: 11px; } ${s}.bc svg { width: 90%; height: 44px; }
 ${s}.qr { text-align: center; margin: 6px 0 2px; } ${s}.qr svg { display: block; margin: 0 auto; width: 28mm; height: 28mm; }
 ${s}.qr.small svg { width: 20mm; height: 20mm; } ${s}.qr.large svg { width: 36mm; height: 36mm; }
