@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASK_EXAMPLES, interpretAsk, periodRange } from './ask';
+import { ASK_EXAMPLES, interpretAsk, periodRange, smallTalk } from './ask';
 
 describe('interpretAsk', () => {
   it('understands every example question', () => {
@@ -102,5 +102,32 @@ describe('periodRange', () => {
       from: '2026-10-17',
       to: '2026-10-23',
     });
+  });
+});
+
+describe('smallTalk', () => {
+  it('knows greetings, thanks and "what can you do"', () => {
+    for (const hi of [
+      'hi',
+      'Hello!',
+      'hey there',
+      'Good morning',
+      'ayubowan',
+      'vanakkam',
+      'how are you',
+    ])
+      expect(smallTalk(hi), hi).toBe('greeting');
+    for (const ty of ['thanks', 'Thank you so much', 'ok thanks', 'great'])
+      expect(smallTalk(ty), ty).toBe('thanks');
+    expect(smallTalk('what can you do?')).toBe('about');
+    expect(smallTalk('help')).toBe('about');
+    expect(smallTalk('hide the logo')).toBeNull();
+    expect(smallTalk('how are sales today')).toBeNull();
+    expect(interpretAsk('hi')).toEqual({ skill: 'hello' });
+  });
+
+  it('answers the question after a greeting', () => {
+    expect(interpretAsk('hi, how are sales today?')).toEqual({ skill: 'sales', period: 'today' });
+    expect(interpretAsk('Hello what is running low')).toEqual({ skill: 'lowStock' });
   });
 });

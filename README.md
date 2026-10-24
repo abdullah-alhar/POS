@@ -27,10 +27,12 @@ logo and colour are set in **Settings → Look**.
   preview; ESC/POS thermal printing with browser fallback
 - Settings with search, a setup check, compare / undo of unsaved changes, history with undo, and
   copy to / from a file
-- Ask on every page (Ctrl+J): sales, comparisons, best sellers, low stock, prices, balances, cash
-  and how-to answers from the shop's own data, plus assistants in Settings and the Receipt Studio;
-  all work offline, and can optionally use a free AI (Groq, Gemini, OpenRouter, Mistral,
-  Cerebras, GitHub Models, any OpenAI-compatible service, or Ollama on the laptop)
+- An AI assistant on every page (animated AI button, Ctrl+J): a chat in any language, typed or
+  spoken, with follow-up questions and advice; sales, comparisons, best sellers, low stock,
+  prices, balances, cash and how-to answers from the shop's own data, plus assistants in Settings
+  and the Receipt Studio. Works offline for the usual questions, and can use a free AI (Groq,
+  Gemini, OpenRouter, Mistral, Cerebras, GitHub Models, any OpenAI-compatible service, or Ollama on
+  the laptop) with customer names hidden from it
 - Backups to a local folder, USB stick and Google Drive
 - Windows installer with self-rolling-back updates, HTTPS and kiosk mode
 

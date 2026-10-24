@@ -12,12 +12,13 @@ import type {
   ReceiptDoc,
 } from '@shoppos/shared';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { AskAiButton } from '@/features/assistant/ask-ai-button';
 import { useCan } from '@/lib/auth';
 import { api, ApiError } from '@/lib/api';
 import { useBranding } from '@/lib/branding';
 import { keys, usePublicSettings } from '@/lib/queries';
 import { cn } from '@/lib/utils';
-import { listPriceOf, unitPriceOf, useCart } from '@/stores/cart';
+import { listPriceOf, setStockGuard, unitPriceOf, useCart } from '@/stores/cart';
 import { printHtml, printReceipt } from '../receipts/print';
 import { receiptHtml } from '../receipts/receipt-html';
 import { BillDiscountDialog } from './bill-discount-dialog';
@@ -87,6 +88,35 @@ export function BillingPage() {
     setDialog(null);
     focusScan();
   }, [focusScan]);
+
+  // ── Stock ──
+
+  // More than the stock: blocked when the shop does not sell with no stock (for everyone, also
+  // admins), otherwise a warning. Covers +, typed quantities and the line editor.
+  const allowNoStock = settings?.pos.allowZeroStockSale ?? true;
+  useEffect(() => {
+    setStockGuard((line, qty, lines) => {
+      if (!line.trackStock || qty <= line.qty) return qty;
+      const item = catalog?.items.find((i) => i.variantId === line.variantId);
+      if (!item) return qty;
+      const elsewhere = lines
+        .filter((l) => l.variantId === line.variantId && l.key !== line.key)
+        .reduce((n, l) => n + l.qty, 0);
+      const free = Math.max(0, item.stockQty - elsewhere);
+      if (qty <= free) return qty;
+      if (!allowNoStock) {
+        beep.error();
+        toast.error(
+          free > 0 ? `Only ${free} of ${item.name} in stock` : `No stock left for ${item.name}`,
+          { id: `stock-${item.variantId}` },
+        );
+        return Math.max(line.qty, free);
+      }
+      toast.warning(`${item.name}: only ${free} in stock`, { id: `stock-${item.variantId}` });
+      return qty;
+    });
+    return () => setStockGuard(null);
+  }, [catalog, allowNoStock]);
 
   // ── Adding items ──
 
@@ -417,6 +447,7 @@ export function BillingPage() {
           <kbd className="bg-muted text-muted-foreground hidden rounded px-1.5 py-0.5 text-[11px] xl:inline">
             F9
           </kbd>
+          <AskAiButton />
         </header>
 
         <CartList

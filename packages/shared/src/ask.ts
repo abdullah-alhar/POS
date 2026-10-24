@@ -4,9 +4,11 @@ import type { Permission } from './permissions';
 /**
  * "Ask" — the assistant on every page. Questions in plain words become one of a few skills
  * (today's sales, compare two months, best sellers, low stock, a customer's balance, open a page,
- * how do I …). The built-in interpreter below understands the usual questions without internet;
- * an AI, when the shop has one, only picks the skill. The answer — every number — is worked out
- * on the shop computer from the shop's own data, so the data never leaves the shop.
+ * how do I …). The built-in interpreter below understands the usual questions without internet.
+ * An AI, when the shop has one, understands everything else (any language, follow-up questions)
+ * by picking skills; every number is still worked out on the shop computer from the shop's own
+ * data. Only when the shop allows it does the AI read those results to explain them in its own
+ * words, with customer names replaced by codes.
  */
 
 export const ASK_PERIODS = {
@@ -352,6 +354,7 @@ export const ASK_SKILLS = {
   goto: { label: 'Open a page', permission: null },
   help: { label: 'How to do something', permission: null },
   settings: { label: 'Change a setting', permission: 'settings.manage' },
+  hello: { label: 'Say hello, thanks, or what the assistant can do', permission: null },
 } as const satisfies Record<string, { label: string; permission: Permission | null }>;
 export type AskSkill = keyof typeof ASK_SKILLS;
 const SKILL_KEYS = Object.keys(ASK_SKILLS) as [AskSkill, ...AskSkill[]];
@@ -433,16 +436,59 @@ export function findHelpTopic(text: string): string | undefined {
   return best?.key;
 }
 
+const normalise = (message: string) =>
+  message
+    .toLowerCase()
+    .replace(/[?!.,]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const GREETINGS =
+  'hi+|hello+|hey+|hai|hiya|helo|yo|good (?:morning|afternoon|evening|day)|salam|salaam|assalamu ?alaikum|ayubowan|vanakkam|namaste|hola|bonjour|ආයුබෝවන්|வணக்கம்';
+const GREETING_START = new RegExp(`^(?:${GREETINGS})(?: there| assistant| ask| friend)?\\b\\s*`);
+
+/**
+ * Greetings, thanks and "what can you do?" in a few words: answered at once, also offline.
+ */
+export function smallTalk(message: string): 'greeting' | 'thanks' | 'about' | null {
+  const t = normalise(message);
+  if (!t) return null;
+  if (new RegExp(`^(?:${GREETINGS})(?: there| assistant| ask| friend| all| everyone)?$`).test(t))
+    return 'greeting';
+  if (/^(?:how are you(?: doing| today)?|how r u|how's it going|whats up|what's up|sup)$/.test(t))
+    return 'greeting';
+  if (
+    /^(?:(?:ok(?:ay)?|great|nice|good|cool|perfect|super|awesome|fine) ?)*(?:thanks?(?: you)?(?: so much| a lot| very much)?|thank u|thx|ty|cheers|tnx)?$/.test(
+      t,
+    ) &&
+    t.length <= 40
+  )
+    return 'thanks';
+  if (
+    /^(?:help|help me|menu|what can you do|what can i ask(?: you)?|what do you do|who are you|what are you|how do(?:es)? (?:you|this|it) work|what can this do)$/.test(
+      t,
+    )
+  )
+    return 'about';
+  return null;
+}
+
+/** What Ask is sent: the question and the questions asked before it (for "and last month?"). */
+export const askRequestSchema = z.object({
+  message: z.string().trim().min(1, 'Type a question').max(1000, 'Keep the question shorter'),
+  history: z.array(z.string().trim().max(500)).max(6).default([]),
+});
+export type AskRequest = z.infer<typeof askRequestSchema>;
+
 /**
  * Understand a question without any AI. Returns null when it is not understood (the AI, if the
  * shop has one, is asked next; otherwise Ask suggests what it can do).
  */
 export function interpretAsk(message: string): AskIntent | null {
-  const t = ` ${message
-    .toLowerCase()
-    .replace(/[?!.,]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()} `;
+  const words = normalise(message);
+  if (smallTalk(message)) return { skill: 'hello' };
+  // "hi, how are sales today?" is a question with a greeting in front.
+  const t = ` ${words.replace(GREETING_START, '').trim()} `;
   const periods = periodsIn(t);
   const howTo =
     /^ (how (do|can|should) (i|we|you)|how to|where (do|can|is)|what is the way|can i|help( me)?|explain|teach)\b/.test(

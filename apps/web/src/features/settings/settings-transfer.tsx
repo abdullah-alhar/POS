@@ -106,7 +106,7 @@ export function SettingsTransfer({ settings }: { settings: AllSettings }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Copy settings</CardTitle>
+        <CardTitle>Settings file</CardTitle>
         <CardDescription>
           Save every setting to a file, as a copy to keep or to set up another shop the same way.
           Opening a file shows what is different before anything changes.

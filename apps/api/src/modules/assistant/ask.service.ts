@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 import {
   applySettingChanges,
@@ -14,9 +14,13 @@ import {
   interpretSettingsCommand,
   periodRange,
   previousPeriod,
+  smallTalk,
   type AskAnswer,
   type AskIntent,
   type AskPeriod,
+  type AskRequest,
+  type AskSkill,
+  type Permission,
   type SalesReport,
 } from '@shoppos/shared';
 import type { Actor } from '../../common/decorators';
@@ -28,38 +32,86 @@ import { localToday, ReportsService } from '../reports/reports.service';
 import { SettingsService } from '../settings/settings.service';
 import { AiError } from './ai-error';
 import { AiService } from './ai.service';
-import { replyText } from './assistant.service';
+import { AssistantService } from './assistant.service';
 
-/** What the AI may answer: one skill with its details, or a short general answer ("chat"). */
-const AI_ANSWER = z.object({
-  skill: z.enum([...(Object.keys(ASK_SKILLS) as [string, ...string[]]), 'chat', 'none']),
+/** One thing to work out; the AI fills these in (several for "sales and what is low"). */
+const AI_STEP = z.object({
+  skill: z.string(),
   period: z.string().optional(),
   period2: z.string().optional(),
   query: z.string().optional(),
   page: z.string().optional(),
   topic: z.string().optional(),
   limit: z.number().optional(),
-  reply: z.string().max(800),
 });
+const AI_PLAN = z.object({
+  steps: z.array(AI_STEP).max(3),
+  reply: z.string().max(1500),
+});
+const AI_WORDS = z.object({ reply: z.string().max(2000) });
 
-const AI_SYSTEM = `You are the helper inside a small shop's point-of-sale system. Read the shop owner's or cashier's question and choose ONE skill; the system then works out the answer from the shop's data. You never see the data, so never make up numbers, names or prices.
+const PLAN_SYSTEM = `You are the friendly assistant inside a small shop's point-of-sale system, chatting with the shop owner or a cashier. They may write in any language (English, Sinhala, Tamil, Singlish …) and may ask follow-up questions.
 
-Skills:
+You cannot see the shop's data. Choose the steps the system must work out to answer; the system runs them on the shop computer. Never make up numbers, names or prices.
+
+Steps you can choose (at most 3):
 ${Object.entries(ASK_SKILLS)
+  .filter(([k]) => k !== 'hello')
   .map(([k, v]) => `- ${k}: ${v.label}`)
   .join('\n')}
-- chat: a general question about running a shop that needs no shop data; put a short, practical answer (at most 5 sentences) in "reply".
-- none: the question cannot be answered; say what you can do in "reply".
 
-Details to fill in when the skill needs them:
+Details to fill in when a step needs them:
 - period / period2 (sales, compare, best, slow, expenses): ${Object.keys(ASK_PERIODS).join(', ')}
-- query (item, customer): the item or customer name to look up
+- query (item, customer): the item or customer name to look up, in English letters as in the shop's list
 - page (goto): ${Object.keys(ASK_PAGES).join(', ')}
 - topic (help): ${Object.entries(HELP_TOPICS)
   .map(([k, v]) => `${k} (${v.title})`)
   .join(', ')}
 - limit (best): how many items, 1-20
-"reply" is one short, friendly sentence introducing the answer (for chat and none, the whole answer). Reply in the language of the question.`;
+
+Rules:
+- A follow-up ("and last month?", "what about chargers?") repeats the earlier question with what changed.
+- Advice ("how can I sell more?") may use data steps (best, slow, lowStock …) so the answer fits this shop.
+- No steps for small talk or general questions that need no shop data: answer them yourself in "reply" (friendly, at most 5 short sentences).
+- With steps, "reply" is one short sentence to introduce the answer.
+- Write "reply" in the language of the latest question.`;
+
+const WORDS_SYSTEM = `You are the friendly assistant inside a small shop's point-of-sale system, chatting with the shop owner or a cashier.
+
+Answer the latest question using ONLY the results below, which the system worked out from the shop's own data just now. Never invent numbers, items, names or prices; if the results do not answer the question, say so briefly.
+
+Write like a helpful colleague in a chat: the direct answer first, then at most 3 short points or one practical tip when it helps. Keep money amounts and numbers exactly as written. Use **bold** for the key number and "- " for lists. No tables: the numbers are shown under your answer. At most 120 words.
+Customer names are replaced by codes like [C1]: write the codes exactly as they are.
+Write in the same language as the latest question (Sinhala, Tamil, English or any other).`;
+
+/** Skills whose results the AI may explain in its own words. */
+const EXPLAIN = new Set<AskSkill>([
+  'sales',
+  'compare',
+  'best',
+  'slow',
+  'expenses',
+  'lowStock',
+  'item',
+  'customer',
+  'owed',
+  'cash',
+  'help',
+]);
+
+/** "and last month?": a short follow-up that only makes sense with the question before it. */
+const FOLLOW_UP = /^(and|what about|how about|also|same|then|but|or|vs|versus)\b/i;
+
+const AI_SETTINGS_LINK = { label: 'Set up the free AI', to: '/settings?s=assistant' };
+
+/** What one skill found: its answer plus what must not be sent to an AI as it is. */
+type Part = Omit<AskAnswer, 'source' | 'cards'> & {
+  title?: string;
+  facts?: NonNullable<AskAnswer['cards']>[number]['facts'];
+  table?: NonNullable<AskAnswer['cards']>[number]['table'];
+  /** Customer names: replaced by codes before an AI reads the results. */
+  private?: string[];
+};
 
 const pct = (now: number, before: number) =>
   before === 0
@@ -68,13 +120,50 @@ const pct = (now: number, before: number) =>
       : 'new'
     : `${now >= before ? '+' : ''}${Math.round(((now - before) / Math.abs(before)) * 100)}%`;
 
+/** Replaces customer names by [C1], [C2] … in what an AI reads, and puts them back after. */
+class Masker {
+  private readonly codes = new Map<string, string>();
+  add(names: string[] = []) {
+    for (const n of names)
+      if (n.trim().length > 1 && !this.codes.has(n)) this.codes.set(n, `[C${this.codes.size + 1}]`);
+  }
+  mask(text: string) {
+    const names = [...this.codes.keys()].sort((a, b) => b.length - a.length);
+    let out = text;
+    for (const n of names) {
+      out = out.replace(
+        new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+        this.codes.get(n)!,
+      );
+      // "Nimal" for "Nimal Perera" too.
+      const first = n.split(/\s+/)[0]!;
+      if (first.length > 2 && first !== n)
+        out = out.replace(
+          new RegExp(`\\b${first.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'),
+          this.codes.get(n)!,
+        );
+    }
+    return out;
+  }
+  unmask(text: string) {
+    let out = text;
+    for (const [name, code] of this.codes) out = out.split(code).join(name);
+    return out;
+  }
+}
+
 /**
- * "Ask": the assistant on every page. Common questions are understood without AI; others go to
- * the AI only to choose a skill. Every answer is worked out here from the shop's own data, and
- * only what the user may see (sales and profit need "reports", balances need "customers" …).
+ * "Ask": the assistant on every page. Common questions are understood without AI. With an AI,
+ * any question is understood (any language, follow-ups, several things at once): the AI picks
+ * skills, and every answer is still worked out here from the shop's own data, only with what
+ * the user may see (sales and profit need "reports", balances need "customers" …). If the shop
+ * allows it, the AI then reads the results to answer in its own words; customer names are
+ * replaced by codes first and phone numbers are left out.
  */
 @Injectable()
 export class AskService {
+  private readonly logger = new Logger('Ask');
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
@@ -82,6 +171,7 @@ export class AskService {
     private readonly inventory: InventoryService,
     private readonly cash: CashRegisterService,
     private readonly ai: AiService,
+    private readonly assistant: AssistantService,
   ) {}
 
   private money(cents: number) {
@@ -89,88 +179,212 @@ export class AskService {
     return formatMoney(cents, { symbol: currencySymbol, showCents });
   }
 
-  async ask(message: string, actor: Actor): Promise<AskAnswer> {
+  async ask(request: AskRequest | string, actor: Actor): Promise<AskAnswer> {
+    const { message, history = [] } =
+      typeof request === 'string' ? { message: request, history: [] } : request;
+    const aiOn = await this.ai.available();
     let intent: AskIntent | null = interpretAsk(message);
     if (!intent && interpretSettingsCommand(message, this.settings.all()).understood)
       intent = { skill: 'settings' };
-    if (intent) return this.run(intent, message, actor, 'built-in');
 
-    if (!(await this.ai.available())) {
-      return {
-        ...this.notUnderstood(),
-        reply: `I did not understand that. ${await this.ai.unavailableReason()} Here are questions I can answer:`,
-      };
+    // Understood here (unless it is a follow-up the AI should read with the question before).
+    if (intent && !(aiOn && history.length && FOLLOW_UP.test(message.trim()))) {
+      const part = await this.part(intent, message, actor);
+      if (!aiOn || !EXPLAIN.has(intent.skill)) return this.combine([part], 'built-in');
+      return this.inWords(message, history, [part], 'built-in');
     }
-    let raw: z.infer<typeof AI_ANSWER>;
+    if (!aiOn) {
+      return this.notUnderstood(
+        actor,
+        hasPermission(actor.user, 'settings.manage')
+          ? 'I did not understand that yet. Try one of these, or turn on the free AI so I understand any question, in any language.'
+          : 'I did not understand that. Try one of these:',
+      );
+    }
+
+    let plan: z.infer<typeof AI_PLAN>;
     try {
-      raw = (await this.ai.json(AI_SYSTEM, `Question: ${message}`, AI_ANSWER)) as z.infer<
-        typeof AI_ANSWER
-      >;
+      plan = (await this.ai.json(
+        PLAN_SYSTEM,
+        this.conversation(message, history, new Masker()),
+        AI_PLAN,
+      )) as z.infer<typeof AI_PLAN>;
     } catch (err) {
       if (!(err instanceof AiError)) throw err;
+      if (intent) return this.combine([await this.part(intent, message, actor)], 'built-in');
       return {
-        ...this.notUnderstood(),
-        reply: `I did not understand that, and the AI could not help: ${err.message}`,
+        ...this.notUnderstood(
+          actor,
+          'I could not reach the AI just now, so I only understand the usual questions. Try one of these:',
+        ),
         aiProblem: err.message,
       };
     }
-    if (raw?.skill === 'chat' || raw?.skill === 'none') {
+    // Older models may answer with one skill instead of a list of steps.
+    const raw = plan as unknown as { steps?: unknown; skill?: unknown; reply?: unknown };
+    const steps = (Array.isArray(raw.steps) ? raw.steps : raw.skill ? [raw] : [])
+      .map((step) => {
+        const st = step as z.infer<typeof AI_STEP>;
+        return askIntentSchema.safeParse({
+          ...st,
+          query: typeof st.query === 'string' ? st.query.slice(0, 80) : undefined,
+          limit:
+            typeof st.limit === 'number'
+              ? Math.min(20, Math.max(1, Math.round(st.limit)))
+              : undefined,
+        });
+      })
+      .filter((r) => r.success)
+      .map((r) => r.data)
+      .slice(0, 3);
+    const intro = typeof raw.reply === 'string' ? raw.reply.trim().slice(0, 1500) : '';
+    if (!steps.length) {
       return {
-        reply: replyText(raw.reply, 0),
+        reply: intro || 'I could not work that out. Try one of these:',
         source: 'ai',
-        suggestions: raw.skill === 'none' ? ASK_EXAMPLES.slice(0, 4) : undefined,
+        suggestions: intro ? undefined : this.examples(actor).slice(0, 4),
       };
     }
-    const parsed = askIntentSchema.safeParse({
-      ...raw,
-      reply: undefined,
-      limit: raw?.limit ? Math.round(raw.limit) : undefined,
-    });
-    if (!parsed.success) {
-      return {
-        ...this.notUnderstood(),
-        reply: 'I could not work that out. Try one of these:',
-        source: 'ai',
-      };
-    }
-    return this.run(
-      parsed.data,
-      message,
-      actor,
-      'ai',
-      typeof raw.reply === 'string' ? raw.reply : '',
-    );
+    const parts = [];
+    for (const step of steps) parts.push(await this.part(step, message, actor));
+    if (!steps.some((s) => EXPLAIN.has(s.skill))) return this.combine(parts, 'ai', intro);
+    return this.inWords(message, history, parts, 'ai', intro);
   }
 
-  private notUnderstood(): AskAnswer {
-    return { reply: '', source: 'built-in', suggestions: ASK_EXAMPLES };
+  /** Earlier questions and the new one, as the AI reads them. */
+  private conversation(message: string, history: string[], masker: Masker) {
+    const before = history.slice(-6).map((q) => `- ${masker.mask(q)}`);
+    return `${before.length ? `Earlier questions in this chat (oldest first):\n${before.join('\n')}\n\n` : ''}Latest question: ${masker.mask(message)}`;
   }
 
-  private async run(
-    intent: AskIntent,
+  /**
+   * Let the AI answer in its own words from the results (when the shop allows it). Without the
+   * AI, or if it fails, the built-in answers are given as they are.
+   */
+  private async inWords(
     message: string,
-    actor: Actor,
+    history: string[],
+    parts: Part[],
     source: AskAnswer['source'],
     intro = '',
   ): Promise<AskAnswer> {
-    const permission = ASK_SKILLS[intent.skill].permission;
-    if (permission && !hasPermission(actor.user, permission)) {
-      return {
-        reply: `You do not have permission to see that (${ASK_SKILLS[intent.skill].label.toLowerCase()}). Ask the shop owner.`,
-        source,
-      };
+    const plain = this.combine(parts, source, intro);
+    if (!this.settings.get('ai').shareResults) return plain;
+    const masker = new Masker();
+    for (const p of parts) masker.add(p.private);
+    const results = parts.map((p) => masker.mask(this.describe(p))).join('\n\n');
+    try {
+      const out = (await this.ai.json(
+        WORDS_SYSTEM,
+        `${this.conversation(message, history, masker)}\n\nResults:\n${results}`,
+        AI_WORDS,
+      )) as { reply?: unknown };
+      const reply = typeof out?.reply === 'string' ? out.reply.trim() : '';
+      if (!reply) return plain;
+      return { ...plain, reply: masker.unmask(reply).slice(0, 2000), source: 'ai' };
+    } catch (err) {
+      if (!(err instanceof AiError)) throw err;
+      this.logger.warn(`Answered without the AI's words: ${err.message}`);
+      return plain;
     }
-    const answer = await this.skill(intent, message, actor);
-    const reply =
-      source === 'ai' && intro && !answer.navigate ? `${intro}\n${answer.reply}` : answer.reply;
-    return { ...answer, reply, source };
   }
 
-  private async skill(
-    intent: AskIntent,
-    message: string,
-    actor: Actor,
-  ): Promise<Omit<AskAnswer, 'source'>> {
+  /** One part of the results as text for the AI: no phone numbers, at most 15 rows. */
+  private describe(p: Part) {
+    const lines = [`### ${p.title ?? 'Answer'}`, p.reply];
+    for (const f of p.facts ?? [])
+      lines.push(`${f.label}: ${f.value}${f.hint ? ` (${f.hint})` : ''}`);
+    if (p.table) {
+      const keep = p.table.columns.map((c, i) => (c === 'Phone' ? -1 : i)).filter((i) => i >= 0);
+      lines.push(keep.map((i) => p.table!.columns[i] || 'What').join(' | '));
+      for (const row of p.table.rows.slice(0, 15))
+        lines.push(`- ${keep.map((i) => row[i]).join(' | ')}`);
+      if (p.table.rows.length > 15) lines.push(`(${p.table.rows.length - 15} more rows)`);
+    }
+    return lines.join('\n');
+  }
+
+  /** The parts of an answer, put together. */
+  private combine(parts: Part[], source: AskAnswer['source'], intro = ''): AskAnswer {
+    const many = parts.length > 1;
+    const cards = parts
+      .filter((p) => p.facts || p.table)
+      .map((p) => ({ ...(many && p.title && { title: p.title }), facts: p.facts, table: p.table }));
+    const links = parts.flatMap((p) => p.links ?? []);
+    const answer: AskAnswer = {
+      reply: [many || source === 'ai' ? intro : '', ...parts.map((p) => p.reply)]
+        .filter(Boolean)
+        .join('\n\n'),
+      source,
+    };
+    if (cards.length) answer.cards = cards;
+    if (links.length)
+      answer.links = links
+        .filter((l, i) => links.findIndex((x) => x.to === l.to) === i)
+        .slice(0, 4);
+    const navigate = parts.find((p) => p.navigate)?.navigate;
+    if (navigate) answer.navigate = navigate;
+    const settings = parts.find((p) => p.settings?.length)?.settings;
+    if (settings) answer.settings = settings;
+    const suggestions = parts.find((p) => p.suggestions?.length)?.suggestions;
+    if (suggestions) answer.suggestions = suggestions;
+    return answer;
+  }
+
+  /** Example questions this user may ask. */
+  private examples(actor: Actor) {
+    return ASK_EXAMPLES.filter((q) => {
+      const skill = interpretAsk(q)?.skill;
+      const permission = skill ? ASK_SKILLS[skill].permission : null;
+      return !permission || hasPermission(actor.user, permission);
+    });
+  }
+
+  private notUnderstood(actor: Actor, reply: string): AskAnswer {
+    return {
+      reply,
+      source: 'built-in',
+      suggestions: this.examples(actor),
+      ...(hasPermission(actor.user, 'settings.manage') && { links: [AI_SETTINGS_LINK] }),
+    };
+  }
+
+  /** Work out one skill, if this user may see it. */
+  private async part(intent: AskIntent, message: string, actor: Actor): Promise<Part> {
+    const permission = ASK_SKILLS[intent.skill].permission;
+    const title = this.title(intent);
+    if (permission && !hasPermission(actor.user, permission)) {
+      return {
+        title,
+        reply: `You do not have permission to see that (${ASK_SKILLS[intent.skill].label.toLowerCase()}). Ask the shop owner.`,
+      };
+    }
+    return { title, ...(await this.skill(intent, message, actor)) };
+  }
+
+  private title(intent: AskIntent) {
+    const period = (p?: AskPeriod) => ASK_PERIODS[p ?? 'today'];
+    switch (intent.skill) {
+      case 'sales':
+        return `Sales, ${period(intent.period).toLowerCase()}`;
+      case 'compare':
+        return `${period(intent.period ?? 'this_month')} and ${period(intent.period2 ?? previousPeriod(intent.period ?? 'this_month')).toLowerCase()}`;
+      case 'best':
+        return `Best sellers, ${period(intent.period ?? 'this_month').toLowerCase()}`;
+      case 'slow':
+        return `Not selling, ${period(intent.period ?? 'last_30_days').toLowerCase()}`;
+      case 'expenses':
+        return `Expenses, ${period(intent.period ?? 'this_month').toLowerCase()}`;
+      case 'item':
+        return `Items: ${intent.query ?? ''}`;
+      case 'customer':
+        return 'Customer';
+      default:
+        return ASK_SKILLS[intent.skill].label;
+    }
+  }
+
+  private async skill(intent: AskIntent, message: string, actor: Actor): Promise<Part> {
     const today = localToday();
     switch (intent.skill) {
       case 'sales':
@@ -211,35 +425,57 @@ export class AskService {
       }
       case 'settings': {
         const current = this.settings.all();
-        const r = interpretSettingsCommand(message, current);
-        const checked = applySettingChanges(current, r.actions);
-        if (!r.understood || !checked.sections.length) {
+        // The built-in assistant first; in other words or languages the settings AI.
+        const answer = await this.assistant.settingsChange(message);
+        const checked = applySettingChanges(current, answer.changes);
+        if (!checked.sections.length) {
           return {
-            reply: r.understood
+            reply: answer.changes.length
               ? 'That is already how it is set.'
-              : 'Open Settings to change that.',
+              : 'I could not find that setting. Open Settings to change it.',
             links: [{ label: 'Open Settings', to: '/settings' }],
           };
         }
         return {
-          reply: 'Here is what would change. Nothing is saved until you approve it.',
-          settings: r.actions.filter((c) =>
+          reply:
+            answer.source === 'ai' && answer.reply
+              ? `${answer.reply}\nNothing is saved until you approve it.`
+              : 'Here is what would change. Nothing is saved until you approve it.',
+          settings: answer.changes.filter((c) =>
             checked.sections.includes(c.path.split('.')[0] as never),
           ),
         };
       }
+      case 'hello':
+        return this.hello(message, actor);
     }
+  }
+
+  private hello(message: string, actor: Actor): Part {
+    const kind = smallTalk(message);
+    if (kind === 'thanks') return { reply: "You're welcome! Anything else?" };
+    const can = (p: Permission) => hasPermission(actor.user, p);
+    const abilities = [
+      can('reports.view') &&
+        '- **Sales and profit**: today, this month, compare periods, best and slow sellers',
+      can('products.view') &&
+        '- **Stock and prices**: what is running low, price and stock of any item',
+      can('customers.manage') && '- **Customers**: who owes money and how much',
+      can('cash.register') && '- **Cash**: how much should be in the drawer',
+      '- **How to** do anything in the system, and **open any page**',
+      can('settings.manage') && '- **Change settings** in plain words (you approve first)',
+    ].filter(Boolean);
+    return {
+      reply: `${kind === 'about' ? 'I can help with:' : 'Hi! I can help with:'}\n${abilities.join('\n')}\n\nWhat would you like to know?`,
+      suggestions: this.examples(actor).slice(0, 6),
+    };
   }
 
   private async totals(period: AskPeriod, today: string): Promise<SalesReport['totals']> {
     return (await this.reports.sales(periodRange(period, today), 'month')).totals;
   }
 
-  private async sales(
-    period: AskPeriod,
-    today: string,
-    actor: Actor,
-  ): Promise<Omit<AskAnswer, 'source'>> {
+  private async sales(period: AskPeriod, today: string, actor: Actor): Promise<Part> {
     const t = await this.totals(period, today);
     const label = ASK_PERIODS[period];
     const avg = t.bills ? Math.round(t.sales / t.bills) : 0;
@@ -274,11 +510,7 @@ export class AskService {
     };
   }
 
-  private async compare(
-    a: AskPeriod,
-    b: AskPeriod,
-    today: string,
-  ): Promise<Omit<AskAnswer, 'source'>> {
+  private async compare(a: AskPeriod, b: AskPeriod, today: string): Promise<Part> {
     const [x, y] = await Promise.all([this.totals(a, today), this.totals(b, today)]);
     const avg = (t: SalesReport['totals']) => (t.bills ? Math.round(t.sales / t.bills) : 0);
     const rows: [string, number, number, boolean][] = [
@@ -292,7 +524,13 @@ export class AskService {
     const running = ['today', 'this_week', 'this_month', 'this_year'].includes(a);
     const direction = x.netSales >= y.netSales ? 'more' : 'less';
     return {
-      reply: `${ASK_PERIODS[a]}: ${this.money(x.netSales)}, ${pct(x.netSales, y.netSales).replace(/^[+-]/, '')} ${direction} than ${ASK_PERIODS[b].toLowerCase()} (${this.money(y.netSales)}).${running ? ` ${ASK_PERIODS[a]} is not over yet.` : ''}`,
+      reply: `${ASK_PERIODS[a]}: ${this.money(x.netSales)}, ${
+        y.netSales === 0
+          ? `and no sales ${ASK_PERIODS[b].toLowerCase()}`
+          : x.netSales === y.netSales
+            ? `the same as ${ASK_PERIODS[b].toLowerCase()}`
+            : `${pct(x.netSales, y.netSales).replace(/^[+-]/, '')} ${direction} than ${ASK_PERIODS[b].toLowerCase()} (${this.money(y.netSales)})`
+      }.${running ? ` ${ASK_PERIODS[a]} is not over yet.` : ''}`,
       table: {
         columns: ['', ASK_PERIODS[a], ASK_PERIODS[b], 'Change'],
         align: ['left', 'right', 'right', 'right'],
@@ -307,11 +545,7 @@ export class AskService {
     };
   }
 
-  private async best(
-    period: AskPeriod,
-    limit: number,
-    today: string,
-  ): Promise<Omit<AskAnswer, 'source'>> {
+  private async best(period: AskPeriod, limit: number, today: string): Promise<Part> {
     const rows = await this.reports.products({
       ...periodRange(period, today),
       sort: 'best',
@@ -335,7 +569,7 @@ export class AskService {
     };
   }
 
-  private async slow(period: AskPeriod, today: string): Promise<Omit<AskAnswer, 'source'>> {
+  private async slow(period: AskPeriod, today: string): Promise<Part> {
     const rows = await this.reports.products({
       ...periodRange(period, today),
       sort: 'slow',
@@ -358,7 +592,7 @@ export class AskService {
     };
   }
 
-  private async expenses(period: AskPeriod, today: string): Promise<Omit<AskAnswer, 'source'>> {
+  private async expenses(period: AskPeriod, today: string): Promise<Part> {
     const { from, to } = periodRange(period, today);
     const rows = await this.prisma.expense.groupBy({
       by: ['category'],
@@ -385,7 +619,7 @@ export class AskService {
     };
   }
 
-  private async lowStock(): Promise<Omit<AskAnswer, 'source'>> {
+  private async lowStock(): Promise<Part> {
     const items = await this.inventory.lowStock();
     if (!items.length) return { reply: 'Nothing is running low. Stock looks good.' };
     const out = items.filter((i) => i.stockQty <= 0).length;
@@ -403,7 +637,7 @@ export class AskService {
     };
   }
 
-  private async item(query: string, actor: Actor): Promise<Omit<AskAnswer, 'source'>> {
+  private async item(query: string, actor: Actor): Promise<Part> {
     const find = (words: string[]) =>
       this.prisma.productVariant.findMany({
         where: {
@@ -461,7 +695,7 @@ export class AskService {
     };
   }
 
-  private async customer(query: string): Promise<Omit<AskAnswer, 'source'>> {
+  private async customer(query: string): Promise<Part> {
     const digits = query.replace(/\D/g, '');
     const found = await this.prisma.customer.findMany({
       where: {
@@ -487,6 +721,7 @@ export class AskService {
             ? `${c.name} owes ${this.money(c.balance)}${c.creditLimit ? ` (credit limit ${this.money(c.creditLimit)})` : ''}.`
             : `${c.name} owes nothing.`
           : `${found.length} customers match "${query}":`,
+      private: found.map((x) => x.name),
       table: {
         columns: ['Customer', 'Phone', 'Owes', 'Credit limit'],
         align: ['left', 'left', 'right', 'right'],
@@ -506,7 +741,7 @@ export class AskService {
     };
   }
 
-  private async owed(): Promise<Omit<AskAnswer, 'source'>> {
+  private async owed(): Promise<Part> {
     const [top, sum] = await Promise.all([
       this.prisma.customer.findMany({
         where: { balance: { gt: 0 } },
@@ -522,6 +757,7 @@ export class AskService {
     if (!top.length) return { reply: 'Nobody owes the shop money.' };
     return {
       reply: `${sum._count} customer${sum._count === 1 ? ' owes' : 's owe'} ${this.money(sum._sum.balance ?? 0)} in total. The most: ${top[0]!.name} (${this.money(top[0]!.balance)}).`,
+      private: top.map((c) => c.name),
       table: {
         columns: ['Customer', 'Phone', 'Owes'],
         align: ['left', 'left', 'right'],
@@ -531,7 +767,7 @@ export class AskService {
     };
   }
 
-  private async cashNow(): Promise<Omit<AskAnswer, 'source'>> {
+  private async cashNow(): Promise<Part> {
     const s = await this.cash.currentSummary();
     if (!s)
       return {

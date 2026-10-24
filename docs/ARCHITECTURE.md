@@ -117,19 +117,26 @@ fixes), `diffLayouts` (added / removed / changed / moved pieces), `estimateBlock
 (`checkSettings`) and labels every setting. Settings history comes from the audit log
 (`GET /settings/history`), whose summaries now say what changed.
 
-The assistants (`assistant.ts` for the receipt and settings, `ask.ts` for "Ask" on every page)
+The assistants (`assistant.ts` for the receipt and settings, `ask.ts` for Ask on every page)
 turn plain requests into actions from a fixed list (`receiptActionSchema`, `ASSISTANT_SETTINGS`,
-`askIntentSchema`). The built-in interpreters understand common requests with no AI and no
-internet; the API tries them first (`modules/assistant`). Only requests they do not understand go
-to the AI chosen in Settings → Assistant (`AiService`): off, a free online service through one
+`askIntentSchema`). The built-in interpreters understand common requests (and small talk) with no
+AI and no internet; the API tries them first (`modules/assistant`). Everything else goes to the AI
+chosen in Settings → AI assistant (`AiService`): off, a free online service through one
 OpenAI-compatible client (`openai-compat.ts`; presets for Groq, Gemini, OpenRouter, Mistral,
 Cerebras and GitHub Models in `ai-providers.ts`), or Ollama in the shop (`ollama.ts`). Keys are
 stored AES-256-GCM encrypted in their own `Setting` row (`ai-keys`), never returned to the browser
-(only a hint) and audited without the value. AI answers are JSON (JSON mode / structured outputs),
-each action is validated with Zod and applied by the same code as manual edits, setting changes
-are shown for approval, at most 20 AI questions run a minute, and when the AI is off, offline or
-fails the built-in answer is returned with the reason (`aiProblem`) instead of an error. For Ask
-the AI only picks a skill: `AskService` works out every answer from the database, within the
-user's permissions, so shop data never leaves the computer. Plain-http AI addresses are allowed
+(only a hint) and audited without the value.
+
+Ask is a conversation (`AskService`): the client sends the question and up to six earlier
+questions. The AI first plans up to three skills (any language, follow-ups, advice); each skill
+runs on the server against the database, within the user's permissions. When `ai.shareResults` is
+on, a second AI call writes the reply in the user's language from those results: customer names
+are replaced by codes (`[C1]`) before sending and restored afterwards, phone columns are dropped,
+and at most 15 rows per table are sent. When it is off, the AI only ever sees the questions. AI
+answers are JSON, validated with Zod; setting changes are shown for approval; at most 30 AI calls
+run a minute; and when the AI is off, offline or fails, the built-in answer is returned (with the
+reason in `aiProblem` where it matters) instead of an error. Voice messages are recorded in the
+browser and transcribed by Groq's Whisper (`POST /assistant/voice`, size-limited), or by the
+browser's own speech recognition when there is no Groq key. Plain-http AI addresses are allowed
 only on this computer or a private network (`isLocalAiUrl`, `isSafeAiApiUrl`); redirects are
 refused.

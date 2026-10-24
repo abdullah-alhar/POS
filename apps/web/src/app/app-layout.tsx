@@ -9,11 +9,13 @@ import {
   LogOut,
   Minimize2,
   Moon,
-  Sparkles,
   Sun,
   UserRound,
 } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation, useMatches, useNavigate } from 'react-router';
+import { AiOrb } from '@/features/assistant/ai-orb';
+import { AskAiButton } from '@/features/assistant/ask-ai-button';
+import { ErrorBoundary } from './error-boundary';
 import { KeyboardLayer, openPanel } from './keyboard-layer';
 import { NAV, pageMatches, type NavItem, type NavPage } from './nav';
 import { ROLE_LABELS } from '@shoppos/shared';
@@ -46,6 +48,7 @@ const COLLAPSE_KEY = 'pos-sidebar-collapsed';
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(() => safeStorage.get(COLLAPSE_KEY) === '1');
   const can = useCan();
+  const { pathname } = useLocation();
   // The billing screen uses the whole window, without page padding.
   const fullBleed = useMatches().some(
     (m) => (m.handle as { fullBleed?: boolean } | undefined)?.fullBleed,
@@ -102,16 +105,21 @@ export function AppLayout() {
       <KeyboardLayer />
       {fullBleed ? (
         <main className="relative min-w-0 flex-1 overflow-hidden">
-          <Outlet />
+          <ErrorBoundary resetKey={pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       ) : (
         // relative: hidden inputs and other absolutely placed elements stay inside this scrolling
         // area; otherwise they can make the whole window scroll and push the sidebar away.
         <main className="relative min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1400px] p-5 lg:p-6">
+          <div className="mx-auto max-w-[1400px] p-5 pb-24 lg:p-6 lg:pb-24">
             <SectionTabs />
-            <Outlet />
+            <ErrorBoundary resetKey={pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </div>
+          <AskAiButton floating />
         </main>
       )}
     </div>
@@ -126,10 +134,10 @@ function AskButton({ collapsed }: { collapsed: boolean }) {
       onClick={() => openPanel('ask')}
       className="bg-sidebar-accent/60 text-sidebar-foreground hover:bg-sidebar-accent flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium"
     >
-      <Sparkles className="text-sidebar-primary size-4.5 shrink-0" />
+      <AiOrb size={22} glow={false} className="-ml-0.5" />
       {!collapsed && (
         <>
-          <span className="flex-1 text-left">Ask</span>
+          <span className="flex-1 text-left">Ask AI</span>
           <kbd className="text-sidebar-muted text-[10px]">Ctrl+J</kbd>
         </>
       )}

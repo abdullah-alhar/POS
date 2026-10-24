@@ -636,16 +636,26 @@ export interface AssistantStatus {
   models: string[];
   /** Why it is not ready, in words. */
   problem: string | null;
+  /** Voice messages can be turned into text by the AI service. */
+  voice: boolean;
+}
+
+/** Numbers or a table in an answer from "Ask". */
+export interface AskCard {
+  title?: string;
+  /** Numbers to show as tiles. */
+  facts?: { label: string; value: string; hint?: string }[];
+  table?: { columns: string[]; rows: string[][]; align?: ('left' | 'right')[] };
 }
 
 /** An answer from "Ask", the assistant on every page. */
 export interface AskAnswer {
+  /** The answer in words (may use **bold** and "- " lists). */
   reply: string;
-  /** built-in: understood without AI; ai: an AI chose what to do (the numbers are still ours). */
+  /** built-in: understood without AI; ai: an AI understood it (the numbers are still ours). */
   source: 'built-in' | 'ai';
-  /** Numbers to show as tiles. */
-  facts?: { label: string; value: string; hint?: string }[];
-  table?: { columns: string[]; rows: string[][]; align?: ('left' | 'right')[] };
+  /** The numbers behind the answer. */
+  cards?: AskCard[];
   /** Pages to open from the answer. */
   links?: { label: string; to: string }[];
   /** Open this page now. */
@@ -656,6 +666,14 @@ export interface AskAnswer {
   suggestions?: string[];
   /** The AI was asked but could not answer (no internet, no key …). */
   aiProblem?: string;
+}
+
+/** What the assistant can do for anyone signed in (no settings needed to know this). */
+export interface AssistantAbilities {
+  /** An AI is switched on (it may still fail, e.g. without internet). */
+  ai: boolean;
+  /** Voice messages are turned into text by the AI service (otherwise by the browser). */
+  voice: boolean;
 }
 
 /* ----------------------------- Backups ----------------------------- */

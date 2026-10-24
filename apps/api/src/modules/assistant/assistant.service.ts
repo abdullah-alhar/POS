@@ -142,7 +142,7 @@ export class AssistantService {
     } catch (err) {
       if (!(err instanceof AiError)) throw err;
       return {
-        reply: `${builtIn.reply} (${err.message})`,
+        reply: builtIn.reply,
         actions: [],
         source: 'built-in',
         aiProblem: err.message,
@@ -195,7 +195,7 @@ export class AssistantService {
     } catch (err) {
       if (!(err instanceof AiError)) throw err;
       return {
-        reply: `${builtIn.reply} (${err.message})`,
+        reply: builtIn.reply,
         changes: [],
         problems: [],
         source: 'built-in',

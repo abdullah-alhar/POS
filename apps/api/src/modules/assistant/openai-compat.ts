@@ -165,3 +165,64 @@ export async function listCompatModels(opts: CallOptions): Promise<string[]> {
     throw err;
   }
 }
+
+/** Largest voice message accepted (about two minutes of speech). */
+export const MAX_AUDIO_BYTES = 1_500_000;
+
+/**
+ * Turn a voice message into text with the service's speech-to-text model (Whisper on Groq). The
+ * language is detected from the speech, so any language works.
+ */
+export async function transcribeCompat(
+  opts: CallOptions & { model: string; audio: Buffer; type: string },
+): Promise<string> {
+  if (!isSafeAiApiUrl(opts.baseUrl)) {
+    throw new AiError('The AI service address is not allowed (use https).', 'not-allowed');
+  }
+  const ext = /mp4|m4a|aac/.test(opts.type) ? 'm4a' : /ogg/.test(opts.type) ? 'ogg' : 'webm';
+  const form = new FormData();
+  form.append('file', new Blob([new Uint8Array(opts.audio)], { type: opts.type }), `voice.${ext}`);
+  form.append('model', opts.model);
+  form.append('response_format', 'json');
+  form.append('temperature', '0');
+  let res: Response;
+  try {
+    res = await fetch(`${opts.baseUrl.replace(/\/+$/, '')}/audio/transcriptions`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        ...(opts.apiKey && { Authorization: `Bearer ${opts.apiKey}` }),
+      },
+      body: form,
+      redirect: 'error',
+      signal: AbortSignal.timeout(opts.timeoutMs),
+    });
+  } catch (err) {
+    if ((err as Error).name === 'TimeoutError') {
+      throw new AiError('The voice message took too long to read. Please try again.', 'timeout');
+    }
+    throw new AiError('No internet connection, so the voice message could not be read.', 'offline');
+  }
+  const text = await res.text();
+  if (res.status === 401 || res.status === 403) {
+    throw new AiError(
+      'The AI service did not accept the key. Check it in Settings → Assistant.',
+      'bad-key',
+    );
+  }
+  if (res.status === 429) {
+    throw new AiError(
+      'The free voice limit is used up for now. Type the question instead.',
+      'rate-limit',
+    );
+  }
+  if (!res.ok) {
+    throw new AiError(`The voice message could not be read (error ${res.status}).`, 'bad-answer');
+  }
+  try {
+    const data = JSON.parse(text.slice(0, MAX_RESPONSE_BYTES)) as { text?: unknown };
+    return typeof data.text === 'string' ? data.text.trim() : '';
+  } catch {
+    throw new AiError('The voice message could not be read.', 'bad-answer');
+  }
+}

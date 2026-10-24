@@ -151,6 +151,11 @@ export const aiSettingsSchema = z
         'Use an address on this computer or the shop network, e.g. ' + AI_DEFAULT_URL,
       ),
     localModel: aiModelName.min(1, 'Enter the model name'),
+    /**
+     * Let the AI read the numbers it explains (totals, item names). Customer names are replaced
+     * by codes and phone numbers are never sent. Off: the AI only reads the question.
+     */
+    shareResults: z.boolean(),
   })
   .superRefine((v, ctx) => {
     if (v.mode === 'online' && v.provider === 'custom') {
@@ -284,6 +289,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
     customUrl: '',
     localUrl: AI_DEFAULT_URL,
     localModel: AI_DEFAULT_MODEL,
+    shareResults: true,
   },
   receiptLibrary: { designs: [] },
 };
