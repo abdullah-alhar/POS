@@ -46,7 +46,7 @@ import { useCan } from '@/lib/auth';
 import { keys, useBrands, useCategories } from '@/lib/queries';
 import { cn } from '@/lib/utils';
 import { usePosIndex } from '../billing/use-pos-index';
-import { AdjustDialog, MovementsTable } from '../inventory/stock-page';
+import { AdjustDialog, MovementsTable } from '../inventory/stock';
 import { BarcodesInput } from './barcodes-input';
 
 const NONE = '__none';

@@ -1,13 +1,13 @@
 {
   "name": "shoppos",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "packageManager": "pnpm@10.34.7",
   "engines": {
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "pnpm --filter @shoppos/shared build && pnpm -r --parallel --filter @shoppos/shared --filter @shoppos/api --filter @shoppos/web dev",
+    "dev": "pnpm --filter @shoppos/shared build && pnpm --filter @shoppos/api db:deploy && pnpm -r --parallel --filter @shoppos/shared --filter @shoppos/api --filter @shoppos/web dev",
     "build": "pnpm --filter @shoppos/shared build && pnpm --filter @shoppos/web build && pnpm --filter @shoppos/api build",
     "start": "pnpm --filter @shoppos/api start",
     "test": "pnpm --filter @shoppos/shared build && pnpm -r test",

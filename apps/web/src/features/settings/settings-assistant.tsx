@@ -12,6 +12,7 @@ import {
 } from '@shoppos/shared';
 import { Button } from '@/components/ui/button';
 import { api, ApiError } from '@/lib/api';
+import { useCan } from '@/lib/auth';
 import { keys } from '@/lib/queries';
 import { AssistantChat, type AssistantTurn } from '../assistant/assistant-chat';
 import { DiffTable } from './diff-table';
@@ -73,6 +74,7 @@ export function Proposal({ next, sections }: { next: AllSettings; sections: Sett
 /** Ask for setting changes in plain words, e.g. "round totals to Rs 10". */
 export function SettingsAssistant() {
   const qc = useQueryClient();
+  const canSetUpAi = useCan()('system.manage');
   async function send(message: string): Promise<AssistantTurn> {
     const answer = await api.post<Answer>('/assistant/settings', { message });
     const now = qc.getQueryData<AllSettings>(keys.settings);
@@ -104,6 +106,7 @@ export function SettingsAssistant() {
   }
   return (
     <AssistantChat
+      showStatus={canSetUpAi}
       intro="Tell me what to change in plain words."
       examples={SETTINGS_ASSISTANT_EXAMPLES}
       send={send}

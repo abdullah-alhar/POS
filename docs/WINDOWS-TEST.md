@@ -87,7 +87,8 @@ PIN), or press **Alt + F4**. To open it again, double-click **ShopPOS** on the d
 
 ## 4. Make test sales
 
-Go to **Billing**. The first time, press **Open the day** and type the cash in the drawer.
+Go to **Billing** and sell: the day starts by itself with the first sale. (To start with change
+in the drawer, **Cash → Set the opening cash**.)
 
 | Try this                                                                                 | What should happen                                       |
 | ---------------------------------------------------------------------------------------- | -------------------------------------------------------- |

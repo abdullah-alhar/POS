@@ -14,11 +14,12 @@ import {
 } from '@shoppos/shared';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCan } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { AiOrb } from '../assistant/ai-orb';
 import { useAssistantStatus } from '../assistant/assistant-chat';
 import { SettingsAssistant } from './settings-assistant';
-import { ISSUE_PAGE, PAGES, type PageId } from './settings-pages';
+import { ISSUE_PAGE, PAGES, type pagesFor, type PageId } from './settings-pages';
 
 /** One line about how each section is set now, for the overview tiles. */
 function summary(id: PageId, settings: AllSettings): string {
@@ -50,35 +51,41 @@ const LEVEL: Record<SettingsIssue['level'], { icon: LucideIcon; className: strin
 export function Overview({
   settings,
   onGo,
+  pages,
 }: {
   settings: AllSettings;
   onGo: (page: PageId) => void;
+  /** The pages this person may use. */
+  pages: ReturnType<typeof pagesFor>;
 }) {
   const issues = checkSettings(settings);
-  const { data: ai } = useAssistantStatus();
+  const canSetUpAi = useCan()('system.manage');
+  const { data: ai } = useAssistantStatus(canSetUpAi);
   return (
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="grid gap-6">
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-          {PAGES.filter((p) => p.id !== 'overview').map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => onGo(p.id)}
-              className="bg-card hover:border-brand/40 group flex items-center gap-3 rounded-xl border p-3.5 text-left shadow-xs transition-all hover:shadow-md"
-            >
-              <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', p.tone)}>
-                <p.icon className="size-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">{p.label}</span>
-                <span className="text-muted-foreground block truncate text-xs">
-                  {summary(p.id, settings)}
+          {pages
+            .filter((p) => p.id !== 'overview')
+            .map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onGo(p.id)}
+                className="bg-card hover:border-brand/40 group flex items-center gap-3 rounded-xl border p-3.5 text-left shadow-xs transition-all hover:shadow-md"
+              >
+                <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', p.tone)}>
+                  <p.icon className="size-5" />
                 </span>
-              </span>
-              <ChevronRight className="text-muted-foreground/60 group-hover:text-brand size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
-            </button>
-          ))}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{p.label}</span>
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {summary(p.id, settings)}
+                  </span>
+                </span>
+                <ChevronRight className="text-muted-foreground/60 group-hover:text-brand size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            ))}
         </div>
 
         <Card>
@@ -136,7 +143,7 @@ export function Overview({
           </CardTitle>
           <CardDescription>
             You see every change before it is saved.
-            {(!ai || ai.mode === 'off' || !ai.ready) && (
+            {canSetUpAi && (!ai || ai.mode === 'off' || !ai.ready) && (
               <>
                 {' '}
                 <button

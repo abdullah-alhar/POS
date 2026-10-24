@@ -9,7 +9,14 @@ import {
 } from '@shoppos/shared';
 import { renderText } from '../src/modules/printing/escpos';
 import { buildSaleReceipt, sampleSale } from '../src/modules/printing/receipt-builder';
-import { resetDb, sampleProduct, standardUsers, startApp, type TestContext } from './helpers';
+import {
+  resetDb,
+  sampleProduct,
+  standardUsers,
+  startApp,
+  superAdmin,
+  type TestContext,
+} from './helpers';
 
 let ctx: TestContext;
 beforeAll(async () => {
@@ -190,14 +197,17 @@ describe('settings history', () => {
 
   it('saves the AI settings only with safe addresses', async () => {
     const { adminHttp } = await standardUsers(ctx);
+    const superHttp = await superAdmin(ctx);
     const ok = { ...DEFAULT_SETTINGS.ai, mode: 'local', localUrl: 'http://127.0.0.1:11434' };
-    await adminHttp.put('/api/settings/ai').send(ok).expect(200);
-    const local = await adminHttp
+    // Setting up the AI service is Super Admin work: the shop owner (Admin) cannot.
+    await adminHttp.put('/api/settings/ai').send(ok).expect(403);
+    await superHttp.put('/api/settings/ai').send(ok).expect(200);
+    const local = await superHttp
       .put('/api/settings/ai')
       .send({ ...ok, localUrl: 'https://ai.example.com' })
       .expect(400);
     expect(local.body.message).toMatch(/this computer or the shop network/);
-    const plain = await adminHttp
+    const plain = await superHttp
       .put('/api/settings/ai')
       .send({
         ...ok,
@@ -316,6 +326,7 @@ describe('assistant', () => {
 
   it('uses a free online AI with a key that is stored encrypted and never shown', async () => {
     const { adminHttp, cashierHttp } = await standardUsers(ctx);
+    const superHttp = await superAdmin(ctx);
     const fake = fakeAi();
     const url = await fake.start();
     try {
@@ -326,14 +337,14 @@ describe('assistant', () => {
         customUrl: `${url}/v1`,
         model: 'free-model',
       };
-      await adminHttp.put('/api/settings/ai').send(ai).expect(200);
-      await adminHttp
+      await superHttp.put('/api/settings/ai').send(ai).expect(200);
+      await superHttp
         .put('/api/assistant/keys/custom')
         .send({ key: 'sk-test-1234567890abcd' })
         .expect(200);
 
       // The key is never sent back, only a hint; it is not stored as plain text either.
-      const status = (await adminHttp.get('/api/assistant/status').expect(200)).body;
+      const status = (await superHttp.get('/api/assistant/status').expect(200)).body;
       expect(status).toMatchObject({ mode: 'online', ready: true, keys: { custom: 'sk-…abcd' } });
       const row = await ctx.prisma.setting.findUniqueOrThrow({ where: { key: 'ai-keys' } });
       expect(JSON.stringify(row.value)).not.toContain('1234567890');
@@ -352,7 +363,7 @@ describe('assistant', () => {
 
       // Test before saving: lists the models and asks a tiny question.
       fake.state.answer = { ok: true };
-      const test = (await adminHttp.post('/api/assistant/test').send({ ai }).expect(200)).body;
+      const test = (await superHttp.post('/api/assistant/test').send({ ai }).expect(200)).body;
       expect(test).toMatchObject({ ready: true, models: ['qwen3.5:4b'], problem: null });
 
       fake.state.answer = {
@@ -391,8 +402,8 @@ describe('assistant', () => {
       expect(bad.body.aiProblem).toMatch(/did not accept the key/);
       fake.state.status = 200;
 
-      await adminHttp.delete('/api/assistant/keys/custom').expect(200);
-      expect((await adminHttp.get('/api/assistant/status').expect(200)).body.keys).toEqual({});
+      await superHttp.delete('/api/assistant/keys/custom').expect(200);
+      expect((await superHttp.get('/api/assistant/status').expect(200)).body.keys).toEqual({});
     } finally {
       await fake.stop();
     }
@@ -400,6 +411,7 @@ describe('assistant', () => {
 
   it('keeps working when there is no internet', async () => {
     const { adminHttp } = await standardUsers(ctx);
+    const superHttp = await superAdmin(ctx);
     // Nothing listens on this port: like a laptop without internet.
     const ai = {
       ...DEFAULT_SETTINGS.ai,
@@ -408,7 +420,7 @@ describe('assistant', () => {
       customUrl: 'http://127.0.0.1:9/v1',
       model: 'm',
     };
-    await adminHttp.put('/api/settings/ai').send(ai).expect(200);
+    await superHttp.put('/api/settings/ai').send(ai).expect(200);
     const res = await adminHttp
       .post('/api/assistant/settings')
       .send({ message: 'something only an AI understands' })
@@ -425,14 +437,15 @@ describe('assistant', () => {
 
   it('asks the local AI model and keeps only allowed settings', async () => {
     const { adminHttp } = await standardUsers(ctx);
+    const superHttp = await superAdmin(ctx);
     const fake = fakeAi();
     const url = await fake.start();
     try {
-      await adminHttp
+      await superHttp
         .put('/api/settings/ai')
         .send({ ...DEFAULT_SETTINGS.ai, mode: 'local', localUrl: url })
         .expect(200);
-      expect((await adminHttp.get('/api/assistant/status').expect(200)).body).toMatchObject({
+      expect((await superHttp.get('/api/assistant/status').expect(200)).body).toMatchObject({
         mode: 'local',
         ready: true,
       });
@@ -519,7 +532,14 @@ describe('ask', () => {
 
     const unknown = await ask(adminHttp, 'write me a poem about tea');
     expect(unknown.suggestions.length).toBeGreaterThan(3);
-    expect(unknown.links).toEqual([{ label: 'Set up the free AI', to: '/settings?s=assistant' }]);
+    // Setting up the AI is for the Super Admin, so the owner is not sent there.
+    expect(unknown.links).toBeUndefined();
+
+    // Staff are never sent to pages or how-tos they may not use.
+    const reports = await ask(cashierHttp, 'open reports');
+    expect(reports.navigate).toBeUndefined();
+    expect(reports.reply).toMatch(/do not have permission/);
+    expect((await ask(cashierHttp, 'how do I make a backup?')).reply).toMatch(/shop owner/);
 
     // Small talk is answered at once, with what this user can ask.
     const hi = await ask(cashierHttp, 'hi');
@@ -532,6 +552,7 @@ describe('ask', () => {
 
   it('understands any question with an AI, answers from shop data and hides customers', async () => {
     const { adminHttp, cashierHttp } = await standardUsers(ctx);
+    const superHttp = await superAdmin(ctx);
     await adminHttp.post('/api/products').send(sampleProduct()).expect(201);
     await adminHttp
       .post('/api/customers')
@@ -548,7 +569,7 @@ describe('ask', () => {
     };
     const chats = () => fake.state.requests.filter((r) => r.path === '/v1/chat/completions');
     try {
-      await adminHttp.put('/api/settings/ai').send(ai).expect(200);
+      await superHttp.put('/api/settings/ai').send(ai).expect(200);
 
       // Any language: the AI picks the steps, the numbers come from the shop's data, and the AI
       // then explains them in the language of the question.
@@ -591,7 +612,7 @@ describe('ask', () => {
       expect(sent).toContain('[C1]');
 
       // The shop can keep all results away from the AI: then it only reads the question.
-      await adminHttp
+      await superHttp
         .put('/api/settings/ai')
         .send({ ...ai, shareResults: false })
         .expect(200);

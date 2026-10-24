@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   applySettingChanges,
   ASK_EXAMPLES,
+  ASK_PAGE_PERMISSION,
   ASK_PAGES,
   ASK_PERIODS,
   ASK_SKILLS,
@@ -11,6 +12,7 @@ import {
   hasPermission,
   HELP_TOPICS,
   interpretAsk,
+  isAdminRole,
   interpretSettingsCommand,
   periodRange,
   previousPeriod,
@@ -115,7 +117,7 @@ export class AskService {
     if (!aiOn) {
       return this.notUnderstood(
         actor,
-        hasPermission(actor.user, 'settings.manage')
+        hasPermission(actor.user, 'system.manage')
           ? 'I did not understand that yet. Try one of these, or turn on the free AI so I understand any question, in any language.'
           : 'I did not understand that. Try one of these:',
       );
@@ -125,7 +127,7 @@ export class AskService {
     try {
       plan = (await this.ai.json(
         PLAN_SYSTEM,
-        this.conversation(message, history, new Masker()),
+        this.conversation(message, history, new Masker(), actor),
         AI_PLAN,
       )) as z.infer<typeof AI_PLAN>;
     } catch (err) {
@@ -170,10 +172,19 @@ export class AskService {
     return this.inWords(message, history, parts, 'ai', intro);
   }
 
-  /** Earlier questions and the new one, as the AI reads them. */
-  private conversation(message: string, history: string[], masker: Masker) {
+  /** Earlier questions and the new one, as the AI reads them (with what the person may do). */
+  private conversation(message: string, history: string[], masker: Masker, actor?: Actor) {
     const before = history.slice(-6).map((q) => `- ${masker.mask(q)}`);
-    return `${before.length ? `Earlier questions in this chat (oldest first):\n${before.join('\n')}\n\n` : ''}Latest question: ${masker.mask(message)}`;
+    const allowed = actor
+      ? (Object.keys(ASK_SKILLS) as AskSkill[]).filter((k) => {
+          const p = ASK_SKILLS[k].permission;
+          return k !== 'hello' && (!p || hasPermission(actor.user, p));
+        })
+      : [];
+    const who = actor
+      ? `The person asking is ${isAdminRole(actor.user.role) ? 'the shop owner (admin)' : 'a staff member'}. This person may use: ${allowed.join(', ')}.\n\n`
+      : '';
+    return `${who}${before.length ? `Earlier questions in this chat (oldest first):\n${before.join('\n')}\n\n` : ''}Latest question: ${masker.mask(message)}`;
   }
 
   /**
@@ -264,8 +275,14 @@ export class AskService {
       reply,
       source: 'built-in',
       suggestions: this.examples(actor),
-      ...(hasPermission(actor.user, 'settings.manage') && { links: [AI_SETTINGS_LINK] }),
+      ...(hasPermission(actor.user, 'system.manage') && { links: [AI_SETTINGS_LINK] }),
     };
+  }
+
+  /** May this user open this page (same rules as the menu)? */
+  private mayOpen(pageKey: string, actor: Actor) {
+    const permission = ASK_PAGE_PERMISSION[pageKey];
+    return !permission || hasPermission(actor.user, permission);
   }
 
   /** Work out one skill, if this user may see it. */
@@ -278,7 +295,16 @@ export class AskService {
         reply: `You do not have permission to see that (${ASK_SKILLS[intent.skill].label.toLowerCase()}). Ask the shop owner.`,
       };
     }
-    return { title, ...(await this.skill(intent, message, actor)) };
+    const answer = await this.skill(intent, message, actor);
+    // Never offer a page this user cannot open.
+    const pageOf = (to: string) =>
+      Object.entries(ASK_PAGES).find(([, p]) => to === p.to || to.startsWith(`${p.to}/`))?.[0];
+    answer.links = answer.links?.filter((l) => {
+      const key = pageOf(l.to);
+      return !key || this.mayOpen(key, actor);
+    });
+    if (answer.links && !answer.links.length) delete answer.links;
+    return { title, ...answer };
   }
 
   private title(intent: AskIntent) {
@@ -331,11 +357,21 @@ export class AskService {
       case 'cash':
         return this.cashNow();
       case 'goto': {
-        const page = ASK_PAGES[intent.page ?? 'home'] ?? ASK_PAGES.home!;
+        const key = intent.page && ASK_PAGES[intent.page] ? intent.page : 'home';
+        const page = ASK_PAGES[key]!;
+        if (!this.mayOpen(key, actor))
+          return {
+            reply: `You do not have permission to open ${page.label}. Ask the shop owner.`,
+          };
         return { reply: `Opening ${page.label}.`, navigate: page.to };
       }
       case 'help': {
         const topic = HELP_TOPICS[intent.topic ?? ''] ?? HELP_TOPICS.sale!;
+        // How-to answers only for what this user may do.
+        if (topic.page && !this.mayOpen(topic.page, actor))
+          return {
+            reply: `${topic.title} is done by the shop owner (or someone they allow). Ask them.`,
+          };
         const page = topic.page ? ASK_PAGES[topic.page] : undefined;
         return {
           reply: `${topic.title}:\n${topic.answer.map((a) => `• ${a}`).join('\n')}`,
@@ -550,7 +586,7 @@ export class AskService {
         rows: items.slice(0, 15).map((i) => [i.name, String(i.stockQty), String(i.reorderLevel)]),
       },
       links: [
-        { label: 'Open stock', to: '/stock' },
+        { label: 'Open low stock', to: '/products?low=1' },
         { label: 'New purchase', to: '/purchases' },
       ],
     };

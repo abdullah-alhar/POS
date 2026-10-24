@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   formatMoney,
   PAYMENT_METHOD_LABELS,
@@ -11,7 +11,8 @@ import {
   type Page,
   type SaleListItem,
 } from '@shoppos/shared';
-import { AppException, badRequest, conflict, notFound } from '../../common/app-exception';
+import { openDayIfNeeded } from '../cash-register/auto-open';
+import { badRequest, conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { Customer, Prisma } from '../../generated/prisma/client';
@@ -178,14 +179,10 @@ export class CustomersService {
           `${customer.name} owes only ${formatMoney(customer.balance, { showCents: true })}`,
         );
       }
-      const session = await tx.cashSession.findFirst({ where: { status: 'OPEN' } });
-      if (input.method === 'CASH' && !session) {
-        throw new AppException(
-          HttpStatus.CONFLICT,
-          'DAY_NOT_OPEN',
-          'Open the day before taking a cash payment.',
-        );
-      }
+      const session =
+        input.method === 'CASH'
+          ? await openDayIfNeeded(tx, actor.user.id)
+          : await tx.cashSession.findFirst({ where: { status: 'OPEN' } });
       const updated = await tx.customer.update({
         where: { id },
         data: { balance: { decrement: input.amount } },

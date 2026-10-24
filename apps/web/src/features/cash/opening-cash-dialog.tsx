@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Sunrise } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CashSessionDto } from '@shoppos/shared';
 import { MoneyInput } from '@/components/money-input';
@@ -17,15 +17,28 @@ import { api } from '@/lib/api';
 
 export const cashSessionKey = ['cash-session', 'current'] as const;
 
-/** Start of the day: count the cash in the drawer. Selling needs an open day. */
-export function OpenDayDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+/**
+ * The cash that was in the drawer when the day started. The day starts by itself with the first
+ * sale (with 0), so this is only needed to count the float.
+ */
+export function OpeningCashDialog({
+  open,
+  onClose,
+  current,
+}: {
+  open: boolean;
+  onClose: () => void;
+  current: number;
+}) {
   const qc = useQueryClient();
-  const [cash, setCash] = useState<number>(0);
-  const openDay = useMutation({
-    mutationFn: () => api.post<CashSessionDto>('/cash-sessions/open', { openingCash: cash }),
+  const [cash, setCash] = useState<number>(current);
+  const save = useMutation({
+    mutationFn: () =>
+      api.patch<CashSessionDto>('/cash-sessions/current/opening', { openingCash: cash }),
     onSuccess: (session) => {
       qc.setQueryData(cashSessionKey, { session });
-      toast.success('The day is open. Happy selling!');
+      qc.invalidateQueries({ queryKey: ['cash-sessions'] });
+      toast.success('Opening cash saved');
       onClose();
     },
   });
@@ -36,16 +49,13 @@ export function OpenDayDialog({ open, onClose }: { open: boolean; onClose: () =>
           className="grid gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (Number.isFinite(cash) && cash >= 0) openDay.mutate();
+            if (Number.isFinite(cash) && cash >= 0) save.mutate();
           }}
         >
-          <DialogHeader className="items-center text-center">
-            <div className="bg-accent text-accent-foreground mb-1 flex size-12 items-center justify-center rounded-full">
-              <Sunrise className="size-6" />
-            </div>
-            <DialogTitle>Open the day</DialogTitle>
+          <DialogHeader>
+            <DialogTitle>Opening cash</DialogTitle>
             <DialogDescription>
-              Count the cash in the drawer before the first sale.
+              The cash that was in the drawer when the day started (the float).
             </DialogDescription>
           </DialogHeader>
           <MoneyInput
@@ -57,11 +67,10 @@ export function OpenDayDialog({ open, onClose }: { open: boolean; onClose: () =>
           <DialogFooter>
             <Button
               type="submit"
-              size="lg"
               className="w-full"
-              disabled={openDay.isPending || !Number.isFinite(cash)}
+              disabled={save.isPending || !Number.isFinite(cash)}
             >
-              {openDay.isPending && <Loader2 className="animate-spin" />} Open the day
+              {save.isPending && <Loader2 className="animate-spin" />} Save
             </Button>
           </DialogFooter>
         </form>

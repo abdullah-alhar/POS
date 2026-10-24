@@ -58,10 +58,27 @@ describe('notifications', () => {
     expect(owner.items.some((n: { link?: string }) => n.link === '/backups')).toBe(true);
     expect(cashier.items.some((n: { link?: string }) => n.link === '/backups')).toBe(false);
 
+    // The owner decides who gets what: voids to everyone, out of stock to nobody.
+    const rules = (await adminHttp.get('/api/settings').expect(200)).body.notifications;
+    await adminHttp
+      .put('/api/settings/notifications')
+      .send({ ...rules, voids: 'everyone', outOfStock: 'off' })
+      .expect(200);
+    await ctx.prisma.auditLog.create({
+      data: {
+        action: 'SALE_VOID',
+        userId: (await ctx.prisma.user.findFirstOrThrow({ where: { username: 'owner' } })).id,
+        summary: 'Voided by the owner',
+      },
+    });
+    const staff = (await cashierHttp.get('/api/notifications').expect(200)).body;
+    const titles = staff.items.map((n: { title: string }) => n.title);
+    expect(titles).toContain('A bill was voided');
+    expect(titles).not.toContain('1 item is out of stock');
+
     // Opening the bell marks everything read.
     await adminHttp.post('/api/notifications/seen').expect(204);
     const after = (await adminHttp.get('/api/notifications').expect(200)).body;
     expect(after.items.filter((n: { unread: boolean }) => n.unread)).toEqual([]);
-    expect(after.items.length).toBe(owner.items.length);
   });
 });

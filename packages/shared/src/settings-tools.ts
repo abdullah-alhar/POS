@@ -1,3 +1,9 @@
+import {
+  NOTIFICATION_AUDIENCE_LABELS,
+  NOTIFICATION_TYPE_KEYS,
+  NOTIFICATION_TYPES,
+  type NotificationAudience,
+} from './notifications';
 import { AI_PROVIDERS, type AiProviderId } from './ai-providers';
 import { bpToPercentText } from './money';
 import { APPROVAL_ACTIONS, type ApprovalAction } from './permissions';
@@ -21,6 +27,7 @@ export const SECTION_LABELS: Record<SettingsSection, string> = {
   backup: 'Backups',
   branding: 'Branding',
   ai: 'Assistant',
+  notifications: 'Notifications',
 };
 
 const yesNo = (v: unknown) => (v ? 'On' : 'Off');
@@ -106,6 +113,16 @@ export const SETTING_INFO: Record<string, { label: string; format?: (v: unknown)
   'branding.primaryColor': { label: 'Colour' },
   'branding.sidebar': { label: 'Sidebar' },
   'branding.startupAnimation': { label: 'Startup animation', format: yesNo },
+  ...Object.fromEntries(
+    NOTIFICATION_TYPE_KEYS.map((k) => [
+      `notifications.${k}`,
+      {
+        label: `Notify: ${NOTIFICATION_TYPES[k].label}`,
+        format: (v: unknown) =>
+          NOTIFICATION_AUDIENCE_LABELS[v as NotificationAudience] ?? String(v),
+      },
+    ]),
+  ),
   'ai.mode': {
     label: 'AI',
     format: (v) =>

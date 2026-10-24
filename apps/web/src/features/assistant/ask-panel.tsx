@@ -285,7 +285,7 @@ export function AskPanel({
               examples={examplesFor(pathname)}
               send={send}
               placeholder="Ask anything… e.g. compare this month with last month"
-              showStatus={can('settings.manage')}
+              showStatus={can('system.manage')}
               initialMessage={chat ? undefined : question}
               hero={hero}
             />

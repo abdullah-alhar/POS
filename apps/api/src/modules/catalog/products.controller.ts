@@ -12,12 +12,14 @@ import {
 } from '@nestjs/common';
 import {
   generateBarcodesSchema,
+  hasPermission,
   productImportSchema,
   productInputSchema,
   productQuerySchema,
   variantPricesSchema,
   type ProductImportInput,
   type ProductInputParsed,
+  type ProductDto,
   type ProductQuery,
   type VariantPricesInput,
 } from '@shoppos/shared';
@@ -54,8 +56,8 @@ export class ProductsController {
 
   @Get(':id')
   @RequirePermissions('products.view')
-  get(@Param('id', ParseUUIDPipe) id: string) {
-    return this.products.get(id);
+  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: Actor) {
+    return hideCost(await this.products.get(id), actor);
   }
 
   @Post()
@@ -120,4 +122,14 @@ export class CatalogController {
   async generate(@Body(new ZodPipe(generateBarcodesSchema)) body: { count: number }) {
     return { codes: await this.products.generateBarcodes(body.count) };
   }
+}
+
+/** What the shop paid is only for people who buy stock, edit products or see profit. */
+function hideCost(product: ProductDto, actor: Actor): ProductDto {
+  const sees = (['products.manage', 'purchases.manage', 'reports.view'] as const).some((p) =>
+    hasPermission(actor.user, p),
+  );
+  return sees
+    ? product
+    : { ...product, variants: product.variants.map((v) => ({ ...v, costPrice: 0 })) };
 }

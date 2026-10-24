@@ -23,6 +23,12 @@ export const ERROR_CODES = [
   /** The assistant is still answering the previous question. */
   'BUSY',
   'BAD_REQUEST',
+  /** The database is older than the program: run the update (UPDATE.cmd / pnpm db:deploy). */
+  'DB_OUTDATED',
+  /** The database is not running or cannot be reached. */
+  'DB_UNAVAILABLE',
+  /** The database took too long (busy, or a very large report). */
+  'DB_TIMEOUT',
   'INTERNAL',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -36,6 +42,25 @@ export interface ApiErrorBody {
   fields?: Record<string, string>;
   /** Extra data, e.g. the approval action that is needed. */
   details?: Record<string, unknown>;
+  /**
+   * Reference of an unexpected error, e.g. "E7K3F9". Its full details are in the server log and
+   * on Settings → Problems, so support can find what happened.
+   */
+  ref?: string;
+}
+
+/** An unexpected error the server met (Settings → Problems). */
+export interface ProblemDto {
+  ref: string;
+  at: string;
+  code: ErrorCode;
+  status: number;
+  method: string;
+  path: string;
+  user: string | null;
+  message: string;
+  /** First lines of the technical details. */
+  detail: string;
 }
 
 export interface Page<T> {

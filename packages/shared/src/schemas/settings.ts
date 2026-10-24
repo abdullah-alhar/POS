@@ -1,3 +1,8 @@
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  notificationSettingsSchema,
+  type NotificationSettings,
+} from '../notifications';
 import { z } from 'zod';
 import { defaultReceiptLayout, receiptElementSchema } from '../receipt-layout';
 import { PRICE_MODES } from '../enums';
@@ -211,6 +216,7 @@ export const SETTINGS_SCHEMAS = {
   backup: backupSettingsSchema,
   ai: aiSettingsSchema,
   receiptLibrary: receiptLibrarySchema,
+  notifications: notificationSettingsSchema,
 } as const;
 
 export type SettingsSection = keyof typeof SETTINGS_SCHEMAS;
@@ -238,6 +244,7 @@ export interface AllSettings {
   backup: BackupSettings;
   ai: AiSettings;
   receiptLibrary: ReceiptLibrary;
+  notifications: NotificationSettings;
 }
 
 export const DEFAULT_SETTINGS: AllSettings = {
@@ -292,6 +299,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
     shareResults: true,
   },
   receiptLibrary: { designs: [] },
+  notifications: DEFAULT_NOTIFICATION_SETTINGS,
 };
 
 /** Settings anyone can read without logging in (login screen, receipt header). */
@@ -320,8 +328,10 @@ export const BRAND_PRESETS: { name: string; color: string }[] = [
 
 /** Settings sections that need a permission other than settings.manage. */
 export const SECTION_PERMISSION: Partial<
-  Record<SettingsSection, 'branding.manage' | 'backups.manage'>
+  Record<SettingsSection, 'branding.manage' | 'backups.manage' | 'system.manage'>
 > = {
   branding: 'branding.manage',
   backup: 'backups.manage',
+  // The AI service (and its keys) is set up by the Super Admin.
+  ai: 'system.manage',
 };

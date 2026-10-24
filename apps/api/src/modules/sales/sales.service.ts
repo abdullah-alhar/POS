@@ -31,6 +31,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { ApprovalsService, type ApprovalNeed } from '../auth/approvals.service';
+import { openDayIfNeeded } from '../cash-register/auto-open';
 import { CashRegisterService } from '../cash-register/cash-register.service';
 import { variantLabel } from '../catalog/products.service';
 import { SettingsService } from '../settings/settings.service';
@@ -348,7 +349,7 @@ export class SalesService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const session = await this.cash.requireOpen(tx);
+        const session = await openDayIfNeeded(tx, actor.user.id);
         const number = await nextDocumentNumber(tx, 'INV');
 
         const sale = await tx.sale.create({

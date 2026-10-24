@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   Boxes,
+  ClipboardCheck,
   ChevronLeft,
   ChevronRight,
   Package,
@@ -39,7 +40,7 @@ import { api, qs } from '@/lib/api';
 import { useCan } from '@/lib/auth';
 import { keys, useBrands, useCategories, useMoney } from '@/lib/queries';
 import { usePosIndex } from '../billing/use-pos-index';
-import { AdjustDialog } from '../inventory/stock-page';
+import { AdjustDialog } from '../inventory/stock';
 import { ImportDialog } from './import-dialog';
 
 const PAGE_SIZE = 50;
@@ -114,6 +115,11 @@ export function ProductsPage() {
               <Button variant="outline" onClick={() => setImporting(true)}>
                 <Upload /> Import
               </Button>
+              {canAdjust && (
+                <Button variant="outline" onClick={() => setAdjusting([])}>
+                  <ClipboardCheck /> Stock count
+                </Button>
+              )}
               <Button asChild>
                 <Link to="/products/new">
                   <Plus /> New product

@@ -9,7 +9,6 @@ import {
   ReceiptText,
   ScanBarcode,
   TrendingUp,
-  Sunrise,
   Moon,
   Undo2,
   PackagePlus,
@@ -75,18 +74,19 @@ export function DashboardPage() {
 
       {data && (
         <div className="mb-5 grid gap-2">
-          {!data.dayOpen && (
+          {data.outOfStock > 0 && (
             <Alert
-              tone="info"
-              to="/cash"
-              text="The day is not open yet. Open it to start selling."
+              tone="bad"
+              to="/products?low=1"
+              text={`${data.outOfStock} item(s) are out of stock.`}
             />
           )}
-          {data.outOfStock > 0 && (
-            <Alert tone="bad" to="/stock" text={`${data.outOfStock} item(s) are out of stock.`} />
-          )}
           {data.lowStock > 0 && (
-            <Alert tone="warn" to="/stock" text={`${data.lowStock} item(s) are running low.`} />
+            <Alert
+              tone="warn"
+              to="/products?low=1"
+              text={`${data.lowStock} item(s) are running low.`}
+            />
           )}
           {backup && (!backup.lastOk || (lastBackupAge ?? 0) > 36) && (
             <Alert
@@ -407,10 +407,12 @@ function QuickActions({ dayOpen }: { dayOpen?: boolean }) {
     },
     {
       to: '/cash',
-      label: dayOpen === false ? 'Open the day' : 'Close the day',
+      label: dayOpen === false ? 'Cash register' : 'Close the day',
       hint:
-        dayOpen === false ? 'Count the cash in the drawer' : 'Count the cash and print the report',
-      icon: dayOpen === false ? Sunrise : Moon,
+        dayOpen === false
+          ? 'The day starts with the first sale'
+          : 'Count the cash and print the report',
+      icon: dayOpen === false ? Wallet : Moon,
       show: can('cash.register'),
     },
     {

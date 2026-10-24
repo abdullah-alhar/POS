@@ -1,14 +1,6 @@
 import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Loader2,
-  Moon,
-  Printer,
-  Sunrise,
-  Wallet,
-} from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Loader2, Moon, Printer, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { type CashSessionDto, type CashSessionSummary, type Page } from '@shoppos/shared';
 import { EmptyState } from '@/components/empty-state';
@@ -41,7 +33,7 @@ import { useCan } from '@/lib/auth';
 import { useBranding } from '@/lib/branding';
 import { useMoney, usePublicSettings } from '@/lib/queries';
 import { cn } from '@/lib/utils';
-import { cashSessionKey, OpenDayDialog } from '../billing/open-day-dialog';
+import { cashSessionKey, OpeningCashDialog } from './opening-cash-dialog';
 import { printReceipt } from '../receipts/print';
 
 const summaryKey = ['cash-session', 'summary'] as const;
@@ -62,6 +54,7 @@ function usePrintDay() {
 export function CashPage() {
   const can = useCan();
   const money = useMoney();
+  const qc = useQueryClient();
   const [opening, setOpening] = useState(false);
   const [movement, setMovement] = useState<'CASH_IN' | 'CASH_OUT' | null>(null);
   const [closing, setClosing] = useState(false);
@@ -84,27 +77,21 @@ export function CashPage() {
     <>
       <PageHeader
         title="Cash register"
-        description="Open the day, record cash in and out, and count the drawer when you close."
+        description="The day starts by itself with the first sale. Record cash in and out, and count the drawer when you close."
         actions={
-          open ? (
-            <>
-              <Button variant="outline" onClick={() => setMovement('CASH_IN')}>
-                <ArrowDownToLine /> Cash in
-              </Button>
-              <Button variant="outline" onClick={() => setMovement('CASH_OUT')}>
-                <ArrowUpFromLine /> Cash out
-              </Button>
+          <>
+            <Button variant="outline" onClick={() => setMovement('CASH_IN')}>
+              <ArrowDownToLine /> Cash in
+            </Button>
+            <Button variant="outline" onClick={() => setMovement('CASH_OUT')}>
+              <ArrowUpFromLine /> Cash out
+            </Button>
+            {open && (
               <Button onClick={() => setClosing(true)} disabled={!summary}>
                 <Moon /> Close the day
               </Button>
-            </>
-          ) : (
-            !isPending && (
-              <Button onClick={() => setOpening(true)}>
-                <Sunrise /> Open the day
-              </Button>
-            )
-          )
+            )}
+          </>
         }
       />
 
@@ -112,8 +99,8 @@ export function CashPage() {
         <Card className="mb-6">
           <EmptyState
             icon={Wallet}
-            title="The day is not open"
-            description="Count the cash in the drawer and open the day to start selling."
+            title="No sales yet today"
+            description="The day starts by itself with the first sale (or cash in / out). Close it in the evening to count the drawer and print the day report."
           />
         </Card>
       )}
@@ -133,12 +120,17 @@ export function CashPage() {
                 strong
               />
               <Stat
-                label="Opened"
-                value={new Date(summary.openedAt).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-                sub={summary.openedBy.fullName}
+                label="Opening cash"
+                value={money(summary.openingCash)}
+                sub={
+                  <button
+                    type="button"
+                    className="text-primary underline-offset-4 hover:underline"
+                    onClick={() => setOpening(true)}
+                  >
+                    Set the opening cash
+                  </button>
+                }
               />
             </div>
             <Card>
@@ -189,7 +181,16 @@ export function CashPage() {
 
       {can('reports.view') && <PastDays />}
 
-      <OpenDayDialog open={opening} onClose={() => setOpening(false)} />
+      {summary && opening && (
+        <OpeningCashDialog
+          open
+          current={summary.openingCash}
+          onClose={() => {
+            setOpening(false);
+            void qc.invalidateQueries({ queryKey: summaryKey });
+          }}
+        />
+      )}
       <Dialog open={!!movement} onOpenChange={(o) => !o && setMovement(null)}>
         <DialogContent className="sm:max-w-sm">
           {movement && <MovementForm type={movement} onDone={() => setMovement(null)} />}
@@ -214,7 +215,7 @@ function Stat({
 }: {
   label: string;
   value: string;
-  sub?: string;
+  sub?: React.ReactNode;
   strong?: boolean;
 }) {
   return (
@@ -224,7 +225,7 @@ function Stat({
       </CardHeader>
       <CardContent className="px-4">
         <p className="text-2xl font-bold tabular-nums">{value}</p>
-        {sub && <p className="text-muted-foreground text-xs">{sub}</p>}
+        {sub && <div className="text-muted-foreground text-xs">{sub}</div>}
       </CardContent>
     </Card>
   );

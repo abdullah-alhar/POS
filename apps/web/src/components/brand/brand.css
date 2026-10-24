@@ -195,7 +195,21 @@
   animation: splash-image-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+/* Each login step (people, PIN, password) slides in gently. */
+.login-step {
+  animation: login-step-in 0.28s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes login-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .login-step {
+    animation: none;
+  }
   .splash,
   .splash * {
     animation-duration: 1ms !important;

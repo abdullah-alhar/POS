@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   EXPENSE_CATEGORIES,
   formatMoney,
@@ -7,7 +7,8 @@ import {
   type ExpenseQuery,
   type Page,
 } from '@shoppos/shared';
-import { AppException, conflict, notFound } from '../../common/app-exception';
+import { openDayIfNeeded } from '../cash-register/auto-open';
+import { conflict, notFound } from '../../common/app-exception';
 import type { Actor } from '../../common/decorators';
 import { nextDocumentNumber } from '../../prisma/counters';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -85,14 +86,10 @@ export class ExpensesService {
 
   async create(input: ExpenseInput, actor: Actor): Promise<ExpenseDto> {
     const row = await this.prisma.$transaction(async (tx) => {
-      const session = await tx.cashSession.findFirst({ where: { status: 'OPEN' } });
-      if (input.paidFrom === 'DRAWER' && !session) {
-        throw new AppException(
-          HttpStatus.CONFLICT,
-          'DAY_NOT_OPEN',
-          'Open the day before paying an expense from the drawer.',
-        );
-      }
+      const session =
+        input.paidFrom === 'DRAWER'
+          ? await openDayIfNeeded(tx, actor.user.id)
+          : await tx.cashSession.findFirst({ where: { status: 'OPEN' } });
       const number = await nextDocumentNumber(tx, 'EXP');
       const expense = await tx.expense.create({
         data: {

@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.2.0 (24 October 2026)
+
+### New
+
+- **New login screen**: the shop's name and the time on one side; tap your name and type your PIN
+  (or use a username and password) on the other. Works on small screens too.
+- **Choose who gets which notification**: Settings → Notifications sets each kind (out of stock,
+  running low, voids, returns, price changes, the drawer, security …) to everyone who may see it,
+  owners only, or off. Nobody is notified about their own actions.
+- **Error codes**: every error shows a code and, for faults, a reference such as `Ref K7Q2MX`.
+  The Super Admin finds it under Settings → Problems; a database that is not updated says so
+  clearly (code `DB_OUTDATED`) instead of "Something went wrong".
+- **New purchases start at the last cost** of each item.
+
+### Changed
+
+- **No more "Open the day"**: the day starts by itself with the first sale. Cash → Set the
+  opening cash records change in the drawer.
+- The **Stock** tab is gone: stock is counted and adjusted in Products (Stock, Stock count and
+  Adjust). Old links open the products that are running low.
+- **Super Admin work is hidden from the shop owner**: setting up the AI service and its keys, and
+  the Problems page.
+- The AI assistant only explains and opens what the person asking is allowed to use.
+- Staff who cannot buy stock, edit products or see reports no longer receive cost prices.
+- Reports no longer show a Tax column (only for old bills that had tax).
+- A smaller AI button that covers less of the page; tabs and back links no longer share a line.
+- `pnpm dev` updates the database before starting.
+
+### Fixed
+
+- Home could show "Something went wrong" after an update until the database was updated.
+- The receipt logo would not move to the centre or right in Receipt Studio and Chrome printing.
+- The Billing page could be opened by users who may not sell.
+- Form labels are linked to their boxes (click a label to type; screen readers read them).
+- The date on a new purchase was cut off.
+
 ## 1.1.0 (24 October 2026)
 
 ### New

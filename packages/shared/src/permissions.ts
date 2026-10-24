@@ -21,13 +21,14 @@ export const PERMISSIONS = {
   'audit.view': 'View the audit log',
   'backups.manage': 'Backups and restore',
   'branding.manage': 'Change the logo, app name and colours',
+  'system.manage': 'Set up the AI service and see technical problems',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
 /** Only the Super Admin (app maker) has these; they can never be given to anyone else. */
-export const SUPER_ADMIN_ONLY_PERMISSIONS: Permission[] = ['branding.manage'];
+export const SUPER_ADMIN_ONLY_PERMISSIONS: Permission[] = ['branding.manage', 'system.manage'];
 
 /** Permissions an admin can tick for a cashier. */
 export const ASSIGNABLE_PERMISSIONS = ALL_PERMISSIONS.filter(

@@ -293,7 +293,10 @@ function SalesTab({ range }: { range: DateRange }) {
     { header: 'Discounts', value: (r) => r.discounts, kind: 'money' },
     { header: 'Returns', value: (r) => r.returns, kind: 'money' },
     { header: 'Net sales', value: (r) => r.netSales, kind: 'money' },
-    { header: 'Tax', value: (r) => r.tax, kind: 'money' },
+    // Tax was removed from the shop; old bills that had tax still show it.
+    ...(data?.totals.tax
+      ? [{ header: 'Tax', value: (r: SalesReportRow) => r.tax, kind: 'money' as const }]
+      : []),
     { header: 'Cost of goods', value: (r) => r.cost, kind: 'money' },
     { header: 'Gross profit', value: (r) => r.grossProfit, kind: 'money' },
     { header: 'Expenses', value: (r) => r.expenses, kind: 'money' },
@@ -381,9 +384,8 @@ function SalesTab({ range }: { range: DateRange }) {
         />
       </ReportCard>
       <p className="text-muted-foreground text-xs">
-        Net sales = sales − returns. Gross profit = net sales − tax − cost of the goods (items put
-        back on the shelf after a return give their cost back). Net profit = gross profit −
-        expenses.
+        Net sales = sales − returns. Gross profit = net sales − cost of the goods (items put back on
+        the shelf after a return give their cost back). Net profit = gross profit − expenses.
       </p>
     </div>
   );
