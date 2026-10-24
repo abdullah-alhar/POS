@@ -144,19 +144,55 @@ first. New bills print like this. Leaving with unsaved changes asks before throw
 - **Copy settings** saves all settings to a file, or opens one (for example from your other shop).
   You see what is different and tick what to take over.
 
-### Free local AI (optional)
+## Ask (the assistant on every page)
 
-The assistant understands common requests by itself, instantly and without internet. To let it
-handle anything else, use a free AI model that runs on the shop laptop:
+Press **Ask** at the bottom of the sidebar, or **Ctrl + J**, on any page. You can also type a
+question in **Ctrl + K** and choose **Ask**. Examples:
 
-1. Install **Ollama** free from ollama.com.
-2. Open a Command Prompt and run `ollama pull qwen3.5:4b` (about 3.4 GB, once). On a slow laptop
-   use a smaller model, for example `llama3.2:3b`.
-3. **Settings → Assistant**: press **Test**, turn on **Use the local AI model** and **Save**.
+- "How are sales today?", "profit last month", "compare this month with last month"
+- "best sellers this week", "what is not selling?", "what is running low?"
+- "price of USB cable", "how many Anker chargers left?"
+- "who owes us money?", "how much does Nimal owe?", "how much cash is in the drawer?"
+- "how do I close the day?", "how do I take a return?", "open reports"
+- "round bill totals to the nearest Rs 10" (you approve it before it is saved)
 
-It is private: the AI runs on your computer (or another computer in the shop; internet addresses
-are refused), it only sees the receipt design and settings (never bills or customers), it can
-only choose from the same safe actions as the editor, and you approve every setting change.
+Ask works **without internet and without AI**. It only shows what the person may see: a cashier
+cannot see sales figures, profit or cost prices unless you allow it.
+
+## Free AI (optional)
+
+Ask, the Settings assistant and the Receipt Studio assistant understand the usual requests by
+themselves. An AI lets them understand anything else. If the internet or the AI is down,
+everything keeps working: they simply answer by themselves.
+
+**Settings → Assistant** offers three choices:
+
+- **Built-in only**: no internet needed. This is how a new shop starts.
+- **Free online AI** (recommended): needs internet and a free key. Choose a service:
+  - **Groq** (recommended: free, no card, very fast). Open **console.groq.com** on any computer
+    or phone, sign in with Google or an email address, open **API Keys → Create API Key**, copy
+    the key (it starts with `gsk_`).
+  - **Google Gemini**: **aistudio.google.com → Get API key → Create API key** (free with a Google
+    account; on the free plan Google may use what is sent to improve its products).
+  - **OpenRouter** (free models, about 50 questions a day): **openrouter.ai → Keys**.
+  - **Mistral** (free after phone verification): **console.mistral.ai → API Keys**.
+  - **Cerebras**, **GitHub Models**, or **Other service** (any OpenAI-compatible service).
+
+  Paste the key, press **Test**, then **Save**. The key is stored encrypted on this computer and
+  never shown again.
+
+- **AI on this computer**: free and offline, but needs a laptop with 8 GB memory or more. Install
+  **Ollama** from ollama.com, run `ollama pull qwen3.5:4b` in a Command Prompt (about 3.4 GB,
+  once; on a slow laptop use `llama3.2:3b`), then **Test** and **Save**.
+
+It is private and safe:
+
+- For questions in Ask, the AI only sees the question. Sales, stock, prices and customers are
+  worked out on this computer and never sent.
+- The Settings and Receipt Studio assistants send only the settings or the receipt design they
+  change, never bills or customers.
+- The AI can only choose from the same safe actions as the screens, every answer is checked, and
+  you approve setting changes before they are saved.
 
 ## Expenses
 

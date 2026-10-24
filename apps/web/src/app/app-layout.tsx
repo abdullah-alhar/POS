@@ -9,6 +9,7 @@ import {
   LogOut,
   Minimize2,
   Moon,
+  Sparkles,
   Sun,
   UserRound,
 } from 'lucide-react';
@@ -82,6 +83,7 @@ export function AppLayout() {
         </nav>
 
         <div className="border-sidebar-border space-y-1 border-t p-2">
+          <AskButton collapsed={collapsed} />
           <UserMenu collapsed={collapsed} />
           <button
             onClick={toggle}
@@ -99,11 +101,13 @@ export function AppLayout() {
 
       <KeyboardLayer />
       {fullBleed ? (
-        <main className="min-w-0 flex-1 overflow-hidden">
+        <main className="relative min-w-0 flex-1 overflow-hidden">
           <Outlet />
         </main>
       ) : (
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        // relative: hidden inputs and other absolutely placed elements stay inside this scrolling
+        // area; otherwise they can make the whole window scroll and push the sidebar away.
+        <main className="relative min-w-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-[1400px] p-5 lg:p-6">
             <SectionTabs />
             <Outlet />
@@ -111,6 +115,32 @@ export function AppLayout() {
         </main>
       )}
     </div>
+  );
+}
+
+/** Ask the assistant from any page (Ctrl+J). */
+function AskButton({ collapsed }: { collapsed: boolean }) {
+  const button = (
+    <button
+      type="button"
+      onClick={() => openPanel('ask')}
+      className="bg-sidebar-accent/60 text-sidebar-foreground hover:bg-sidebar-accent flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium"
+    >
+      <Sparkles className="text-sidebar-primary size-4.5 shrink-0" />
+      {!collapsed && (
+        <>
+          <span className="flex-1 text-left">Ask</span>
+          <kbd className="text-sidebar-muted text-[10px]">Ctrl+J</kbd>
+        </>
+      )}
+    </button>
+  );
+  if (!collapsed) return button;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent side="right">Ask (Ctrl+J)</TooltipContent>
+    </Tooltip>
   );
 }
 

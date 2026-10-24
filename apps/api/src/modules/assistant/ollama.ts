@@ -1,19 +1,11 @@
 import { isLocalAiUrl } from '@shoppos/shared';
+import { AiError } from './ai-error';
 
 /**
  * A small client for Ollama (https://ollama.com), which runs free, open AI models on this
  * computer. Nothing goes to the internet: the address must be this computer or the shop network
  * (checked again here, not only when the setting is saved), and redirects are refused.
  */
-
-export class LocalModelError extends Error {
-  constructor(
-    message: string,
-    readonly reason: 'unreachable' | 'no-model' | 'timeout' | 'bad-answer' | 'not-local',
-  ) {
-    super(message);
-  }
-}
 
 /** Largest answer we read (a design change is a few KB). */
 const MAX_RESPONSE_BYTES = 256_000;
@@ -25,10 +17,7 @@ async function call(
   timeoutMs: number,
 ): Promise<unknown> {
   if (!isLocalAiUrl(baseUrl)) {
-    throw new LocalModelError(
-      'The AI server must be on this computer or the shop network.',
-      'not-local',
-    );
+    throw new AiError('The AI server must be on this computer or the shop network.', 'not-allowed');
   }
   const url = `${baseUrl.replace(/\/+$/, '')}${path}`;
   let res: Response;
@@ -42,30 +31,30 @@ async function call(
     });
   } catch (err) {
     const timedOut = (err as Error).name === 'TimeoutError';
-    throw new LocalModelError(
+    throw new AiError(
       timedOut
         ? 'The AI model took too long to answer. Try a shorter request or a smaller model.'
         : 'The AI server is not running. Start Ollama on this computer.',
-      timedOut ? 'timeout' : 'unreachable',
+      timedOut ? 'timeout' : 'offline',
     );
   }
   const text = await res.text();
   if (text.length > MAX_RESPONSE_BYTES) {
-    throw new LocalModelError('The AI model answered with too much text.', 'bad-answer');
+    throw new AiError('The AI model answered with too much text.', 'bad-answer');
   }
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
-    throw new LocalModelError('The AI server sent an answer that could not be read.', 'bad-answer');
+    throw new AiError('The AI server sent an answer that could not be read.', 'bad-answer');
   }
   if (!res.ok) {
     const error = (data as { error?: unknown }).error;
     const message = typeof error === 'string' ? error : `error ${res.status}`;
     if (res.status === 404 || /not found|pull/i.test(message)) {
-      throw new LocalModelError(`The AI model is not downloaded (${message}).`, 'no-model');
+      throw new AiError(`The AI model is not downloaded (${message}).`, 'no-model');
     }
-    throw new LocalModelError(`The AI server answered: ${message}`, 'bad-answer');
+    throw new AiError(`The AI server answered: ${message}`, 'bad-answer');
   }
   return data;
 }
@@ -109,11 +98,11 @@ export async function chatJson(
   )) as { message?: { content?: unknown } };
   const content = data.message?.content;
   if (typeof content !== 'string') {
-    throw new LocalModelError('The AI model gave an empty answer.', 'bad-answer');
+    throw new AiError('The AI model gave an empty answer.', 'bad-answer');
   }
   try {
     return JSON.parse(content);
   } catch {
-    throw new LocalModelError('The AI model did not answer in the expected form.', 'bad-answer');
+    throw new AiError('The AI model did not answer in the expected form.', 'bad-answer');
   }
 }

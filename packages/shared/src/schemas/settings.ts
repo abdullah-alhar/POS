@@ -2,6 +2,14 @@ import { z } from 'zod';
 import { defaultReceiptLayout, receiptElementSchema } from '../receipt-layout';
 import { PRICE_MODES } from '../enums';
 import { ALL_APPROVAL_ACTIONS } from '../permissions';
+import {
+  AI_DEFAULT_MODEL,
+  AI_DEFAULT_PROVIDER,
+  AI_DEFAULT_URL,
+  AI_PROVIDER_IDS,
+  isLocalAiUrl,
+  isSafeAiApiUrl,
+} from '../ai-providers';
 import { bpSchema, imageDataUrlSchema } from './common';
 
 export const shopSettingsSchema = z.object({
@@ -103,48 +111,59 @@ export const printerSettingsSchema = z.object({
   logo: printerLogoSchema.nullable(),
 });
 
-/**
- * Is this the address of an AI server on this computer or the shop network? Only such addresses
- * are allowed, so bills, settings and customer details never leave the shop.
- */
-export function isLocalAiUrl(url: string): boolean {
-  const m = /^https?:\/\/(\[[0-9a-f:.]+\]|[a-z0-9.-]+)(?::(\d{1,5}))?\/?$/i.exec(url.trim());
-  if (!m) return false;
-  const host = m[1]!.toLowerCase();
-  if (m[2] && Number(m[2]) > 65_535) return false;
-  // Names other than localhost could point anywhere, so the shop network needs the IP address.
-  if (host === 'localhost' || host === '[::1]') return true;
-  const ip = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
-  if (!ip) return false;
-  const [a, b] = [Number(ip[1]), Number(ip[2])];
-  if ([a, b, Number(ip[3]), Number(ip[4])].some((n) => n > 255)) return false;
-  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
-}
+/** off: only the built-in assistant. online: a free online AI. local: Ollama in the shop. */
+export const AI_MODES = ['off', 'online', 'local'] as const;
+export type AiMode = (typeof AI_MODES)[number];
 
-/** The free model suggested for the shop laptop (runs on the CPU, about 3.4 GB). */
-export const AI_DEFAULT_MODEL = 'qwen3.5:4b';
-export const AI_DEFAULT_URL = 'http://127.0.0.1:11434';
+const aiModelName = z
+  .string()
+  .trim()
+  .max(100)
+  .regex(/^[\w.:/@-]*$/, 'Use the model name exactly as the service shows it');
 
 /**
- * The assistant in Settings and the receipt editor. It always understands common requests by
- * itself; with this on, other requests go to a free AI model running locally through Ollama.
+ * The assistant in Settings, the Receipt Studio and "Ask" on every page. It always understands
+ * common requests by itself, without internet. Optionally, other requests go to a free AI:
+ * online (needs internet and a free key, kept encrypted on this computer) or on this computer.
  */
-export const aiSettingsSchema = z.object({
-  enabled: z.boolean(),
-  url: z
-    .string()
-    .trim()
-    .refine(
-      isLocalAiUrl,
-      'Use an address on this computer or the shop network, e.g. ' + AI_DEFAULT_URL,
-    ),
-  model: z
-    .string()
-    .trim()
-    .min(1, 'Enter the model name')
-    .max(100)
-    .regex(/^[\w.:/-]+$/, 'Use the model name as Ollama shows it, e.g. ' + AI_DEFAULT_MODEL),
-});
+export const aiSettingsSchema = z
+  .object({
+    mode: z.enum(AI_MODES),
+    /** Online service. */
+    provider: z.enum(AI_PROVIDER_IDS),
+    /** Online model; empty = the service's recommended model. */
+    model: aiModelName,
+    /** Only for "Other service": its OpenAI-compatible address. */
+    customUrl: z
+      .string()
+      .trim()
+      .max(200)
+      .refine(
+        (v) => v === '' || isSafeAiApiUrl(v),
+        'Use an https:// address (or http:// on the shop network)',
+      ),
+    /** Ollama on this computer or the shop network. */
+    localUrl: z
+      .string()
+      .trim()
+      .refine(
+        isLocalAiUrl,
+        'Use an address on this computer or the shop network, e.g. ' + AI_DEFAULT_URL,
+      ),
+    localModel: aiModelName.min(1, 'Enter the model name'),
+  })
+  .superRefine((v, ctx) => {
+    if (v.mode === 'online' && v.provider === 'custom') {
+      if (!v.customUrl)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['customUrl'],
+          message: 'Enter the address of the service',
+        });
+      if (!v.model)
+        ctx.addIssue({ code: 'custom', path: ['model'], message: 'Enter the model name' });
+    }
+  });
 
 /** Receipt designs the shop saved by name in the receipt editor, to switch between later. */
 export const receiptLibrarySchema = z.object({
@@ -258,7 +277,14 @@ export const DEFAULT_SETTINGS: AllSettings = {
     logo: null,
   },
   backup: { dailyAt: '21:30', onDayClose: true, keep: 30, usbPath: '', driveUpload: false },
-  ai: { enabled: false, url: AI_DEFAULT_URL, model: AI_DEFAULT_MODEL },
+  ai: {
+    mode: 'off',
+    provider: AI_DEFAULT_PROVIDER,
+    model: '',
+    customUrl: '',
+    localUrl: AI_DEFAULT_URL,
+    localModel: AI_DEFAULT_MODEL,
+  },
   receiptLibrary: { designs: [] },
 };
 

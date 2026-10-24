@@ -12,6 +12,7 @@ interface Answer {
   reply: string;
   actions: ReceiptAction[];
   source: 'built-in' | 'ai';
+  aiProblem?: string;
 }
 
 /** Ask for changes in plain words; each answer is one history step (and can be undone). */
@@ -58,7 +59,14 @@ export function AssistantPanel({ inputRef }: { inputRef?: RefObject<HTMLTextArea
             : result.done.length
               ? 'Done.'
               : '');
-    return { reply, done: result.done, problems: result.problems, source: answer.source, undo };
+    return {
+      reply,
+      done: result.done,
+      problems: result.problems,
+      source: answer.source,
+      undo,
+      notice: answer.aiProblem,
+    };
   }
 
   return (

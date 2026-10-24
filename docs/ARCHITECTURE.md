@@ -117,24 +117,19 @@ fixes), `diffLayouts` (added / removed / changed / moved pieces), `estimateBlock
 (`checkSettings`) and labels every setting. Settings history comes from the audit log
 (`GET /settings/history`), whose summaries now say what changed.
 
-The assistant (`assistant.ts`) turns plain requests into actions from a fixed list
-(`receiptActionSchema`, `ASSISTANT_SETTINGS`). The built-in interpreter understands common
-requests without any AI. `POST /assistant/receipt` and `/assistant/settings` try it first; only
-requests it does not understand go to a free local model through Ollama (`modules/assistant`),
-when the shop turns it on in Settings → Assistant. The model answers with JSON constrained by a
-schema (Ollama structured outputs), every action is validated with Zod, actions are applied by
-the same code as manual edits, setting changes are shown for approval, the AI address must be on
-this computer or the private network (`isLocalAiUrl`, redirects refused), one AI request runs at
-a time and only the design and settings are sent, never bills or customers.
-
-## Release and database updates
-
-`pnpm release:win` bundles the server with esbuild into three files (`main.js`, `cli/migrate.js`,
-`cli/seed.js`), so the shop laptop needs no `node_modules` and no Prisma CLI. `cli/migrate.js` applies
-`prisma/migrations` itself, each migration in its own transaction, and records them in Prisma's own
-`_prisma_migrations` table, so it stays compatible with `prisma migrate` during development.
-
-## Running as one app
-
-In production, NestJS serves `apps/web/dist` and the API under `/api`. Unknown paths return
-`index.html` so browser refreshes work on any page.
+The assistants (`assistant.ts` for the receipt and settings, `ask.ts` for "Ask" on every page)
+turn plain requests into actions from a fixed list (`receiptActionSchema`, `ASSISTANT_SETTINGS`,
+`askIntentSchema`). The built-in interpreters understand common requests with no AI and no
+internet; the API tries them first (`modules/assistant`). Only requests they do not understand go
+to the AI chosen in Settings → Assistant (`AiService`): off, a free online service through one
+OpenAI-compatible client (`openai-compat.ts`; presets for Groq, Gemini, OpenRouter, Mistral,
+Cerebras and GitHub Models in `ai-providers.ts`), or Ollama in the shop (`ollama.ts`). Keys are
+stored AES-256-GCM encrypted in their own `Setting` row (`ai-keys`), never returned to the browser
+(only a hint) and audited without the value. AI answers are JSON (JSON mode / structured outputs),
+each action is validated with Zod and applied by the same code as manual edits, setting changes
+are shown for approval, at most 20 AI questions run a minute, and when the AI is off, offline or
+fails the built-in answer is returned with the reason (`aiProblem`) instead of an error. For Ask
+the AI only picks a skill: `AskService` works out every answer from the database, within the
+user's permissions, so shop data never leaves the computer. Plain-http AI addresses are allowed
+only on this computer or a private network (`isLocalAiUrl`, `isSafeAiApiUrl`); redirects are
+refused.

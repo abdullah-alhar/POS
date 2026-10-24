@@ -41,6 +41,14 @@ export class SettingsService implements OnModuleInit {
       if (section === 'receipt' && !Array.isArray(value.layout)) {
         value = { ...value, layout: receiptLayoutFromLegacy(value) };
       }
+      // The first AI settings had only a local model: on/off, its address and name.
+      if (section === 'ai' && 'enabled' in value) {
+        value = {
+          mode: value.enabled ? 'local' : 'off',
+          ...(typeof value.url === 'string' && { localUrl: value.url }),
+          ...(typeof value.model === 'string' && { localModel: value.model }),
+        };
+      }
       const merged = { ...DEFAULT_SETTINGS[section], ...value };
       const parsed = SETTINGS_SCHEMAS[section].safeParse(merged);
       if (parsed.success) (next as Record<SettingsSection, unknown>)[section] = parsed.data;
