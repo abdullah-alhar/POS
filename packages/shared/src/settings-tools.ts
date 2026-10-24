@@ -121,6 +121,10 @@ export const SETTING_INFO: Record<string, { label: string; format?: (v: unknown)
   'ai.customUrl': { label: 'Other service address' },
   'ai.localUrl': { label: 'Local AI address' },
   'ai.localModel': { label: 'Local AI model' },
+  'ai.shareResults': {
+    label: 'AI may read the answers it explains',
+    format: (v) => (v ? 'Yes (customer names hidden)' : 'No, only the question'),
+  },
 };
 
 /** A setting shown the way people read it. */

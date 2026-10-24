@@ -233,6 +233,8 @@ function fakeAi() {
   const state = {
     models: ['qwen3.5:4b'],
     answer: {} as unknown,
+    /** Answers given one after the other (before falling back to `answer`). */
+    queue: [] as unknown[],
     status: 200,
     requests: [] as { path: string; body: Record<string, unknown>; auth?: string }[],
   };
@@ -242,7 +244,7 @@ function fakeAi() {
     req.on('end', () => {
       state.requests.push({
         path: req.url ?? '',
-        body: body ? JSON.parse(body) : {},
+        body: body && req.headers['content-type']?.includes('json') ? JSON.parse(body) : {},
         auth: req.headers.authorization,
       });
       res.setHeader('Content-Type', 'application/json');
@@ -253,8 +255,11 @@ function fakeAi() {
         res.end(JSON.stringify({ models: state.models.map((name) => ({ name })) }));
       } else if (req.url === '/v1/models') {
         res.end(JSON.stringify({ data: state.models.map((id) => ({ id })) }));
+      } else if (req.url === '/v1/audio/transcriptions') {
+        res.end(JSON.stringify({ text: 'ada sales kohomada?' }));
       } else if (req.url === '/v1/chat/completions') {
-        const content = '```json\n' + JSON.stringify(state.answer) + '\n```';
+        const next = state.queue.length ? state.queue.shift() : state.answer;
+        const content = '```json\n' + JSON.stringify(next) + '\n```';
         res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content } }] }));
       } else {
         res.end(
@@ -474,7 +479,7 @@ describe('ask', () => {
     const sales = await ask(adminHttp, 'How are sales today?');
     expect(sales.source).toBe('built-in');
     expect(sales.reply).toMatch(/No sales yet today/);
-    expect(sales.facts.map((f: { label: string }) => f.label)).toEqual([
+    expect(sales.cards[0].facts.map((f: { label: string }) => f.label)).toEqual([
       'Sales',
       'Bills',
       'Average bill',
@@ -482,14 +487,14 @@ describe('ask', () => {
     ]);
 
     const compare = await ask(adminHttp, 'compare this month with last month');
-    expect(compare.table.columns).toEqual(['', 'This month', 'Last month', 'Change']);
+    expect(compare.cards[0].table.columns).toEqual(['', 'This month', 'Last month', 'Change']);
 
     const item = await ask(adminHttp, 'how many anker chargers left');
-    expect(item.table.rows.map((r: string[]) => r[0]).sort()).toEqual([
+    expect(item.cards[0].table.rows.map((r: string[]) => r[0]).sort()).toEqual([
       'Anker 20W Charger – Black',
       'Anker 20W Charger – White',
     ]);
-    expect(item.table.columns).toContain('Cost');
+    expect(item.cards[0].table.columns).toContain('Cost');
 
     const low = await ask(adminHttp, 'what is running low?');
     expect(low.reply).toMatch(/out of stock/);
@@ -508,51 +513,125 @@ describe('ask', () => {
       /do not have permission/,
     );
     const cashierItem = await ask(cashierHttp, 'price of anker charger');
-    expect(cashierItem.table.columns).not.toContain('Cost');
+    expect(cashierItem.cards[0].table.columns).not.toContain('Cost');
     expect((await ask(cashierHttp, 'lock the screen after 5 minutes')).reply).toMatch(
       /do not have permission/,
     );
 
     const unknown = await ask(adminHttp, 'write me a poem about tea');
     expect(unknown.suggestions.length).toBeGreaterThan(3);
+    expect(unknown.links).toEqual([{ label: 'Set up the free AI', to: '/settings?s=assistant' }]);
+
+    // Small talk is answered at once, with what this user can ask.
+    const hi = await ask(cashierHttp, 'hi');
+    expect(hi.reply).toMatch(/^Hi! I can help with/);
+    expect(hi.reply).not.toMatch(/Sales and profit/);
+    expect(hi.suggestions).not.toContain('How are sales today?');
+    expect((await ask(adminHttp, 'thank you')).reply).toMatch(/welcome/);
+    expect((await ask(adminHttp, 'hello, what is running low?')).reply).toMatch(/out of stock/);
   });
 
-  it('lets an AI choose the skill without seeing any shop data', async () => {
-    const { adminHttp } = await standardUsers(ctx);
+  it('understands any question with an AI, answers from shop data and hides customers', async () => {
+    const { adminHttp, cashierHttp } = await standardUsers(ctx);
     await adminHttp.post('/api/products').send(sampleProduct()).expect(201);
+    await adminHttp
+      .post('/api/customers')
+      .send({ name: 'Nimal Perera', phone: '0771234567', creditLimit: 5_000_000 })
+      .expect(201);
     const fake = fakeAi();
     const url = await fake.start();
+    const ai = {
+      ...DEFAULT_SETTINGS.ai,
+      mode: 'online',
+      provider: 'custom',
+      customUrl: `${url}/v1`,
+      model: 'm',
+    };
+    const chats = () => fake.state.requests.filter((r) => r.path === '/v1/chat/completions');
     try {
-      await adminHttp
-        .put('/api/settings/ai')
-        .send({
-          ...DEFAULT_SETTINGS.ai,
-          mode: 'online',
-          provider: 'custom',
-          customUrl: `${url}/v1`,
-          model: 'm',
-        })
-        .expect(200);
-      fake.state.answer = { skill: 'item', query: 'anker', reply: 'Here is the Anker charger.' };
+      await adminHttp.put('/api/settings/ai').send(ai).expect(200);
+
+      // Any language: the AI picks the steps, the numbers come from the shop's data, and the AI
+      // then explains them in the language of the question.
+      fake.state.queue = [
+        { steps: [{ skill: 'item', query: 'anker' }], reply: 'Meka thiyenawa.' },
+        { reply: 'Ow, **Anker 20W Charger – White** 10k thiyenawa. Black eka iwarai.' },
+      ];
       const res = await adminHttp
         .post('/api/assistant/ask')
-        .send({ message: 'do we still have those white chargers from anker' })
+        .send({ message: 'anker charger thiyenawada?', history: ['ada sales kohomada?'] })
         .expect(200);
       expect(res.body.source).toBe('ai');
-      expect(res.body.reply).toMatch(/^Here is the Anker charger/);
-      expect(res.body.table.rows).toHaveLength(2);
-      const prompt = JSON.stringify(
-        fake.state.requests.find((r) => r.path === '/v1/chat/completions')!.body,
-      );
-      expect(prompt).not.toContain('450');
-      expect(prompt).not.toMatch(/Anker 20W/);
+      expect(res.body.reply).toMatch(/^Ow, \*\*Anker/);
+      expect(res.body.cards[0].table.rows).toHaveLength(2);
+      const [plan, words] = chats().map((r) => JSON.stringify(r.body));
+      // Choosing the steps: only the questions, no shop data.
+      expect(plan).toContain('ada sales kohomada?');
+      expect(plan).not.toContain('Anker 20W');
+      // Explaining: the AI reads the results (the shop allows it by default).
+      expect(words).toContain('Anker 20W Charger');
 
-      fake.state.answer = { skill: 'chat', reply: 'Put chargers next to the phones.' };
+      // Customer names are replaced by codes, phone numbers are left out, and the names come
+      // back in the answer.
+      fake.state.requests = [];
+      fake.state.queue = [
+        { steps: [{ skill: 'owed' }], reply: '' },
+        { reply: '[C1] owes the most.' },
+      ];
+      await adminHttp.post('/api/customers').send({ name: 'Kamal Silva', phone: '0719876543' });
+      const kamal = await ctx.prisma.customer.findFirstOrThrow({ where: { name: 'Kamal Silva' } });
+      await ctx.prisma.customer.update({ where: { id: kamal.id }, data: { balance: 250_000 } });
+      const owed = await adminHttp
+        .post('/api/assistant/ask')
+        .send({ message: 'kauda salli denna thiyenne?' })
+        .expect(200);
+      expect(owed.body.reply).toBe('Kamal Silva owes the most.');
+      const sent = JSON.stringify(chats().map((r) => r.body));
+      expect(sent).not.toContain('Kamal');
+      expect(sent).not.toContain('0719876543');
+      expect(sent).toContain('[C1]');
+
+      // The shop can keep all results away from the AI: then it only reads the question.
+      await adminHttp
+        .put('/api/settings/ai')
+        .send({ ...ai, shareResults: false })
+        .expect(200);
+      fake.state.requests = [];
+      fake.state.queue = [{ steps: [{ skill: 'item', query: 'anker' }], reply: 'Here it is.' }];
+      const quiet = await adminHttp
+        .post('/api/assistant/ask')
+        .send({ message: 'do we still have those chargers from anker' })
+        .expect(200);
+      expect(quiet.body.reply).toMatch(/^Here it is\./);
+      expect(chats()).toHaveLength(1);
+      expect(JSON.stringify(chats()[0]!.body)).not.toMatch(/Anker 20W/);
+
+      // General questions are answered by the AI itself.
+      fake.state.queue = [{ steps: [], reply: 'Put chargers next to the phones.' }];
       const tip = await adminHttp
         .post('/api/assistant/ask')
         .send({ message: 'ideas to sell more chargers?' })
         .expect(200);
       expect(tip.body).toEqual({ reply: 'Put chargers next to the phones.', source: 'ai' });
+
+      // A cashier still cannot see sales, whatever the AI chooses.
+      fake.state.queue = [{ steps: [{ skill: 'sales', period: 'today' }], reply: '' }];
+      const denied = await cashierHttp
+        .post('/api/assistant/ask')
+        .send({ message: 'ada wikunum kiyada?' })
+        .expect(200);
+      expect(denied.body.reply).toMatch(/do not have permission/);
+      expect(denied.body.cards).toBeUndefined();
+
+      // Voice messages: turned into text by the service's speech model (Groq only), for anyone.
+      expect((await cashierHttp.get('/api/assistant/abilities').expect(200)).body).toEqual({
+        ai: true,
+        voice: false,
+      });
+      await cashierHttp
+        .post('/api/assistant/voice')
+        .send({ audio: Buffer.alloc(200).toString('base64'), type: 'audio/webm' })
+        .expect(400);
     } finally {
       await fake.stop();
     }

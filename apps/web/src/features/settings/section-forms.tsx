@@ -3,12 +3,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   GitCompareArrows,
-  Loader2,
   Monitor,
   Moon,
   Plus,
   RotateCcw,
-  Save,
   Star,
   Sun,
   Trash2,
@@ -63,6 +61,7 @@ import { keys, useTaxRates } from '@/lib/queries';
 import { useTheme, type ThemeChoice } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import { DiffTable } from './diff-table';
+import { SaveBar } from './save-bar';
 
 /**
  * One form per settings section, checked with the same rules the server uses. When the settings
@@ -128,7 +127,7 @@ function SectionCard({
   const toDefaults = diffSettings({ [section]: values }, { [section]: DEFAULT_SETTINGS[section] });
 
   return (
-    <Card className={className}>
+    <Card className={cn('pb-0', className)}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -137,14 +136,11 @@ function SectionCard({
         className="grid gap-5"
       >
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {title}
-            {dirty && rows.length > 0 && <Badge variant="warning">{rows.length} not saved</Badge>}
-          </CardTitle>
+          <CardTitle>{title}</CardTitle>
           {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
         <CardContent className="grid gap-4">{children}</CardContent>
-        <div className="flex flex-wrap items-center gap-2 px-5">
+        <SaveBar dirty={dirty && rows.length > 0} count={rows.length} saving={save.isPending}>
           <Button
             type="button"
             variant="ghost"
@@ -161,14 +157,11 @@ function SectionCard({
                 <GitCompareArrows /> Compare
               </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => form.reset()}>
-                <Undo2 /> Undo changes
+                <Undo2 /> Undo
               </Button>
             </>
           )}
-          <Button type="submit" className="ml-auto" disabled={save.isPending || !dirty}>
-            {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
-          </Button>
-        </div>
+        </SaveBar>
       </form>
       <Dialog open={compare} onOpenChange={setCompare}>
         <DialogContent className="sm:max-w-lg">
@@ -262,7 +255,7 @@ export function ShopForm({ settings }: { settings: AllSettings }) {
   const e = form.formState.errors;
   return (
     <SectionCard
-      title="Shop details"
+      title="Name and contact"
       description="Printed on receipts and reports."
       sf={sf as SectionForm}
     >
@@ -435,7 +428,7 @@ export function PosForm({ settings }: { settings: AllSettings }) {
   const { form } = sf;
   return (
     <SectionCard
-      title="Billing"
+      title="Prices and selling"
       description="How prices are shown and rounded."
       sf={sf as SectionForm}
     >
@@ -538,7 +531,7 @@ export function ApprovalsForm({ settings }: { settings: AllSettings }) {
   const { form } = sf;
   return (
     <SectionCard
-      title="Admin approval"
+      title="Cashier limits"
       description="Cashiers need an admin to type their PIN for these actions. Admins never need approval."
       sf={sf as SectionForm}
     >

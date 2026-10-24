@@ -1,16 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  FileText,
-  Globe,
-  Loader2,
-  Monitor,
-  Printer,
-  RefreshCw,
-  Save,
-  Usb,
-  Wallet,
-} from 'lucide-react';
+import { FileText, Globe, Loader2, Monitor, Printer, RefreshCw, Usb, Wallet } from 'lucide-react';
 import { Controller, useForm, useWatch, type Control } from 'react-hook-form';
 import { toast } from 'sonner';
 import {
@@ -38,6 +28,7 @@ import { api } from '@/lib/api';
 import { useBranding } from '@/lib/branding';
 import { keys } from '@/lib/queries';
 import { cn } from '@/lib/utils';
+import { SaveBar } from './save-bar';
 import { buildPrinterLogo } from '../receipts/printer-logo';
 
 const MODES: { mode: PrinterMode; title: string; text: string; icon: typeof Usb }[] = [
@@ -206,13 +197,15 @@ export function PrinterForm({ settings }: { settings: AllSettings }) {
         </Card>
       )}
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <SaveBar dirty={dirty} saving={save.isPending} floating>
         {mode !== 'browser' && (
           <>
             <Button
               type="button"
               variant="outline"
+              size="sm"
               disabled={dirty || test.isPending}
+              title={dirty ? 'Save first, then test' : undefined}
               onClick={() => test.mutate()}
             >
               {test.isPending ? <Loader2 className="animate-spin" /> : <Printer />} Test print
@@ -220,20 +213,16 @@ export function PrinterForm({ settings }: { settings: AllSettings }) {
             <Button
               type="button"
               variant="outline"
+              size="sm"
               disabled={dirty || drawer.isPending}
+              title={dirty ? 'Save first, then test' : undefined}
               onClick={() => drawer.mutate()}
             >
               <Wallet /> Open drawer
             </Button>
           </>
         )}
-        <Button type="submit" disabled={save.isPending || !dirty}>
-          {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
-        </Button>
-      </div>
-      {dirty && mode !== 'browser' && (
-        <p className="text-muted-foreground -mt-3 text-right text-xs">Save first, then test.</p>
-      )}
+      </SaveBar>
     </form>
   );
 }

@@ -105,6 +105,16 @@ function fromItem(item: PosIndexItem, qty: number): CartLine {
   };
 }
 
+/**
+ * Checks a new quantity against the stock: returns the quantity allowed (the billing screen sets
+ * it, since it knows the stock and the "sell with no stock" setting).
+ */
+type StockGuard = (line: CartLine, qty: number, lines: CartLine[]) => number;
+let stockGuard: StockGuard | null = null;
+export function setStockGuard(guard: StockGuard | null) {
+  stockGuard = guard;
+}
+
 export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
@@ -137,9 +147,12 @@ export const useCart = create<CartState>()(
         set((s) => ({ lines: [...s.lines, line], selectedKey: line.key }));
         return line;
       },
-      setQty(key, qty) {
-        if (qty < 1) return;
-        if (qty > 1 && get().lines.find((l) => l.key === key)?.trackSerial) return;
+      setQty(key, wanted) {
+        const line = get().lines.find((l) => l.key === key);
+        if (!line || wanted < 1) return;
+        if (wanted > 1 && line.trackSerial) return;
+        const qty = stockGuard ? stockGuard(line, wanted, get().lines) : wanted;
+        if (qty === line.qty) return;
         set((s) => ({ lines: s.lines.map((l) => (l.key === key ? { ...l, qty } : l)) }));
       },
       changeQty(key, delta) {
@@ -172,7 +185,12 @@ export const useCart = create<CartState>()(
         set({ selectedKey: lines[next]!.key });
       },
       updateLine(key, patch) {
-        set((s) => ({ lines: s.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) }));
+        const line = get().lines.find((l) => l.key === key);
+        if (!line) return;
+        const next = { ...patch };
+        if (next.qty !== undefined && stockGuard)
+          next.qty = stockGuard(line, next.qty, get().lines);
+        set((s) => ({ lines: s.lines.map((l) => (l.key === key ? { ...l, ...next } : l)) }));
       },
       setBillDiscount(discount) {
         set({ billDiscount: discount && discount.value > 0 ? discount : null });

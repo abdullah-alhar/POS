@@ -53,6 +53,11 @@ In the payment window: type the amount and press **Enter**; **F4** = exact cash.
 cash, **K** for card, **B** for bank transfer or **A** for the customer's account (credit) first.
 You can split a bill, for example part card and part cash.
 
+**More than the stock:** with **Settings → Billing → Allow selling items with no stock** off, nobody
+(also not an admin) can put more on the bill than is in stock: scanning, `+`, typed quantities and
+the line editor all stop at the stock, with a message. With it on, the bill goes through with a
+warning and the sale is written in the audit log.
+
 Cashiers need your PIN for big discounts, price changes, voiding a bill, refunds, taking cash out,
 opening the drawer and selling above a customer's credit limit. You can change these rules in
 **Settings → Admin approval**.
@@ -132,65 +137,84 @@ first. New bills print like this. Leaving with unsaved changes asks before throw
 
 ## Settings made easy
 
-- **Overview** (the first page of Settings) lists anything worth fixing, each with a **Fix**
-  button, and has the **assistant**: type "round bill totals to the nearest Rs 10", "cashiers can
-  give up to 15% discount" or "lock the screen after 5 minutes". It shows each change as _Now_ and
-  _New_; nothing is saved until you press **Save these changes**.
+- The menu on the left is grouped: **Your shop** (details, receipt, printer), **Selling** (billing,
+  VAT, admin approval), **App** (look, AI assistant) and **Tools** (history, copy settings).
+- **Overview** (the first page of Settings) shows every section with how it is set now, lists
+  anything worth fixing (each with a **Fix** button), and has the assistant: type "round bill
+  totals to the nearest Rs 10", "cashiers can give up to 15% discount" or "lock the screen after 5
+  minutes". It shows each change as _Now_ and _New_; nothing is saved until you press **Save these
+  changes**.
 - **Search** (top right) finds any setting by its name, for example "rounding" or "drawer".
-- On every page, **Compare** shows what you changed but did not save yet, **Undo changes** throws
-  them away and **Defaults** puts back the values a new shop starts with.
+- At the bottom of every page a bar says **All saved** or how many changes are **not saved**, and
+  holds **Save**, **Compare** (what changed), **Undo** and **Defaults** (the values a new shop
+  starts with). It stays in view while you scroll.
 - **History** lists every saved change, who made it and when. **See change**, **Compare with now**,
   or **Undo** to bring the earlier settings back.
 - **Copy settings** saves all settings to a file, or opens one (for example from your other shop).
   You see what is different and tick what to take over.
 
-## Ask (the assistant on every page)
+## The AI assistant (on every page)
 
-Press **Ask** at the bottom of the sidebar, or **Ctrl + J**, on any page. You can also type a
-question in **Ctrl + K** and choose **Ask**. Examples:
+Press the round, glowing **AI button** in the bottom-right corner of any page (in Billing it is at
+the top right), **Ask AI** in the sidebar, or **Ctrl + J**. You can also type a question in
+**Ctrl + K** and choose **Ask**. It is a chat:
 
-- "How are sales today?", "profit last month", "compare this month with last month"
-- "best sellers this week", "what is not selling?", "what is running low?"
-- "price of USB cable", "how many Anker chargers left?"
-- "who owes us money?", "how much does Nimal owe?", "how much cash is in the drawer?"
-- "how do I close the day?", "how do I take a return?", "open reports"
-- "round bill totals to the nearest Rs 10" (you approve it before it is saved)
+- Type **or speak** (the microphone button), in **English, සිංහල, தமிழ் or any language**.
+- Ask follow-up questions: "how are sales today?" and then "and yesterday?".
+- Ask for several things or for advice: "sales this week and what is running low", "give me 3
+  ideas to sell more this week".
+- Every answer shows the numbers under it (tiles and tables) and buttons to open the right page.
+  **Copy** and **Read aloud** are under each answer; **New chat** starts again.
 
-Ask works **without internet and without AI**. It only shows what the person may see: a cashier
-cannot see sales figures, profit or cost prices unless you allow it.
+Examples: "how are sales today?", "compare this month with last month", "best sellers this week",
+"what is not selling?", "what is running low?", "price of USB cable", "who owes us money?", "how
+much cash is in the drawer?", "how do I close the day?", "open reports", "round bill totals to the
+nearest Rs 10" (you approve it before it is saved).
+
+Without internet or without AI it still answers the usual questions (in English) by itself. It
+only shows what the person may see: a cashier cannot see sales figures, profit or cost prices
+unless you allow it.
 
 ## Free AI (optional)
 
-Ask, the Settings assistant and the Receipt Studio assistant understand the usual requests by
-themselves. An AI lets them understand anything else. If the internet or the AI is down,
-everything keeps working: they simply answer by themselves.
-
-**Settings → Assistant** offers three choices:
+**Settings → AI assistant** offers three choices:
 
 - **Built-in only**: no internet needed. This is how a new shop starts.
-- **Free online AI** (recommended): needs internet and a free key. Choose a service:
-  - **Groq** (recommended: free, no card, very fast). Open **console.groq.com** on any computer
-    or phone, sign in with Google or an email address, open **API Keys → Create API Key**, copy
-    the key (it starts with `gsk_`).
+- **Free online AI** (recommended): any question in any language, natural answers, advice and
+  voice messages. Needs internet and a free key. Choose a service:
+  - **Groq** (recommended: free, no card, very fast, also reads voice messages). Open
+    **console.groq.com** on any computer or phone, sign in with Google or an email address, open
+    **API Keys → Create API Key**, copy the key (it starts with `gsk_`).
   - **Google Gemini**: **aistudio.google.com → Get API key → Create API key** (free with a Google
     account; on the free plan Google may use what is sent to improve its products).
   - **OpenRouter** (free models, about 50 questions a day): **openrouter.ai → Keys**.
   - **Mistral** (free after phone verification): **console.mistral.ai → API Keys**.
   - **Cerebras**, **GitHub Models**, or **Other service** (any OpenAI-compatible service).
 
-  Paste the key, press **Test**, then **Save**. The key is stored encrypted on this computer and
-  never shown again.
+  Paste the key, press **Test the AI**, then **Save**. The key is stored encrypted on this computer
+  and never shown again.
 
 - **AI on this computer**: free and offline, but needs a laptop with 8 GB memory or more. Install
   **Ollama** from ollama.com, run `ollama pull qwen3.5:4b` in a Command Prompt (about 3.4 GB,
   once; on a slow laptop use `llama3.2:3b`), then **Test** and **Save**.
 
-It is private and safe:
+**Voice messages** are turned into text by Groq (any language) when a Groq key is saved. Without
+it, Chrome and Edge can listen instead (choose English, සිංහල or தமிழ் next to the microphone).
+Both need internet; typing always works.
 
-- For questions in Ask, the AI only sees the question. Sales, stock, prices and customers are
-  worked out on this computer and never sent.
+### Your data and the AI
+
+- Every number is worked out **on this computer** from your shop's data, and only what the person
+  asking may see.
+- **Let the AI explain the answers in its own words** (Settings → AI assistant → Privacy, on by
+  default): the AI reads the results it explains (totals, item names) so it can chat naturally,
+  give advice and answer in your language. **Customer names are replaced by codes** such as [C1]
+  before anything is sent, and are put back on this computer; **phone numbers are never sent**.
+  Switch it off and the AI only reads the question.
+- Bills, passwords, backups and the key itself are never sent to the AI. The key only goes to its
+  own service, over https.
 - The Settings and Receipt Studio assistants send only the settings or the receipt design they
-  change, never bills or customers.
+  change.
 - The AI can only choose from the same safe actions as the screens, every answer is checked, and
   you approve setting changes before they are saved.
 

@@ -32,6 +32,8 @@ export interface AiProvider {
   free: string;
   /** Anything the owner should know (privacy, limits). */
   note?: string;
+  /** Speech-to-text model for voice messages, when the service has one. */
+  voiceModel?: string;
 }
 
 export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
@@ -45,7 +47,8 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProvider> = {
       'Open "API Keys" and press "Create API Key".',
       'Copy the key (it starts with gsk_) and paste it below.',
     ],
-    free: 'Free, no card. Very fast. Enough for a shop (about 30 questions a minute).',
+    free: 'Free, no card. Very fast. Enough for a shop (about 30 questions a minute). Also understands voice messages.',
+    voiceModel: 'whisper-large-v3-turbo',
   },
   gemini: {
     name: 'Google Gemini',

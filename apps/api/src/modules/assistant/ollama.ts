@@ -34,7 +34,7 @@ async function call(
     throw new AiError(
       timedOut
         ? 'The AI model took too long to answer. Try a shorter request or a smaller model.'
-        : 'The AI server is not running. Start Ollama on this computer.',
+        : 'The AI on this computer (Ollama) is not running. Start Ollama, or choose the free online AI (Groq) in Settings → Assistant.',
       timedOut ? 'timeout' : 'offline',
     );
   }

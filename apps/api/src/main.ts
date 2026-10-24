@@ -40,6 +40,13 @@ async function main() {
 }
 
 if (require.main === module) {
+  // A stray error in background work (a backup, a printer, an AI call) is written to the log;
+  // it must never stop the shop's server while bills are being made.
+  process.on('unhandledRejection', (reason) => {
+    new Logger('ShopPOS').error(
+      `Unhandled error: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`,
+    );
+  });
   main().catch((err: unknown) => {
     console.error(err);
     process.exit(1);

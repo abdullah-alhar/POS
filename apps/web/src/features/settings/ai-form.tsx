@@ -9,7 +9,6 @@ import {
   KeyRound,
   Loader2,
   PlugZap,
-  Save,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -33,10 +32,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { api, ApiError } from '@/lib/api';
 import { keys } from '@/lib/queries';
 import { cn } from '@/lib/utils';
 import { useAssistantStatus } from '../assistant/assistant-chat';
+import { SaveBar } from './save-bar';
 
 const MODES: { mode: AiMode; title: string; text: string; icon: typeof Cloud }[] = [
   {
@@ -48,7 +50,7 @@ const MODES: { mode: AiMode; title: string; text: string; icon: typeof Cloud }[]
   {
     mode: 'online',
     title: 'Free online AI',
-    text: 'Understands anything. Needs internet and a free key. Recommended.',
+    text: 'Chats in any language, understands anything, voice messages. Needs internet and a free key. Recommended.',
     icon: Cloud,
   },
   {
@@ -80,7 +82,10 @@ export function AiForm({ settings }: { settings: AllSettings }) {
   const [changingKey, setChangingKey] = useState(false);
   const savedKey = status?.keys[values.provider];
 
-  const refreshStatus = (s: AssistantStatus) => qc.setQueryData(['assistant-status'], s);
+  const refreshStatus = (s: AssistantStatus) => {
+    qc.setQueryData(['assistant-status'], s);
+    void qc.invalidateQueries({ queryKey: ['assistant-abilities'] });
+  };
   const test = useMutation({
     mutationFn: (v: AiSettings) =>
       api.post<AssistantStatus>('/assistant/test', { ai: v, key: key.trim() || undefined }),
@@ -112,6 +117,7 @@ export function AiForm({ settings }: { settings: AllSettings }) {
     onSuccess: (v) => {
       qc.setQueryData<AllSettings>(keys.settings, (old) => (old ? { ...old, ai: v } : old));
       qc.invalidateQueries({ queryKey: ['assistant-status'] });
+      qc.invalidateQueries({ queryKey: ['assistant-abilities'] });
       form.reset(v);
       toast.success(
         v.mode === 'off' ? 'The assistant works on its own now' : 'The AI is on for the assistant',
@@ -126,12 +132,13 @@ export function AiForm({ settings }: { settings: AllSettings }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="text-brand size-5" /> Assistant
+            <Sparkles className="text-brand size-5" /> How the assistant answers
           </CardTitle>
           <CardDescription>
-            Ask (on every page), the Settings assistant and the Receipt Studio assistant always
-            work, also without internet. An AI is optional: it only helps with requests they do not
-            understand. If the internet or the AI is down, they simply answer by themselves.
+            The assistant (the AI button on every page, Settings and the Receipt Studio) always
+            works, also without internet. With an AI it understands any question in any language,
+            follow-up questions and voice messages, and chats naturally. If the internet or the AI
+            is down, it simply answers the usual questions by itself.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -374,43 +381,62 @@ export function AiForm({ settings }: { settings: AllSettings }) {
       {values.mode !== 'off' && result && <TestResult status={result} />}
 
       <Card>
-        <CardContent className="grid gap-1.5 pt-1 text-sm">
-          <p className="flex items-center gap-1.5 font-medium">
-            <ShieldCheck className="text-success size-4" /> Safe and private
-          </p>
-          <ul className="text-muted-foreground list-disc space-y-0.5 pl-5 text-xs">
-            <li>Without internet or without AI, everything keeps working.</li>
-            <li>
-              For questions in Ask, the AI only sees the question. Sales, stock, prices and
-              customers are worked out on this computer and never sent.
-            </li>
-            <li>
-              The Settings and Receipt Studio assistants send the settings or the receipt design
-              they change (no bills or customers).
-            </li>
-            <li>
-              The AI can only choose from the same safe actions as the screens, every answer is
-              checked, and you approve setting changes before they are saved.
-            </li>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="text-success size-5" /> Privacy and safety
+          </CardTitle>
+          <CardDescription>
+            What the AI service can see, and what stays on this computer.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 text-sm">
+          <Controller
+            control={form.control}
+            name="shareResults"
+            render={({ field }) => (
+              <div className="flex items-start justify-between gap-6 rounded-lg border p-3">
+                <div>
+                  <Label htmlFor="ai-share">Let the AI explain the answers in its own words</Label>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    On: the AI reads the numbers it explains (totals, item names), so it can chat
+                    naturally, give advice and answer in Sinhala, Tamil or any language. Customer
+                    names are replaced by codes such as [C1] and phone numbers are never sent. Off:
+                    the AI only reads the question; the answer is written on this computer.
+                  </p>
+                </div>
+                <Switch id="ai-share" checked={field.value} onCheckedChange={field.onChange} />
+              </div>
+            )}
+          />
+          <ul className="text-muted-foreground grid gap-1.5 text-xs">
+            {[
+              'Without internet or without AI, everything keeps working; the built-in assistant answers.',
+              'Every number is worked out on this computer from the shop data, only what the person asking may see (a cashier never sees profit or cost prices).',
+              'Bills, customer phone numbers, passwords and backups are never sent to the AI.',
+              'The key is stored encrypted on this computer and only sent to its own service over https.',
+              'The AI can only choose from the same safe actions as the screens; setting changes are shown to you before anything is saved.',
+            ].map((t) => (
+              <li key={t} className="flex gap-2">
+                <CheckCircle2 className="text-success mt-px size-3.5 shrink-0" /> {t}
+              </li>
+            ))}
           </ul>
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap justify-end gap-2">
+      <SaveBar dirty={form.formState.isDirty || !!key.trim()} saving={save.isPending} floating>
         {values.mode !== 'off' && (
           <Button
             type="button"
             variant="outline"
+            size="sm"
             disabled={test.isPending}
             onClick={form.handleSubmit((v) => test.mutate(v))}
           >
-            {test.isPending ? <Loader2 className="animate-spin" /> : <PlugZap />} Test
+            {test.isPending ? <Loader2 className="animate-spin" /> : <PlugZap />} Test the AI
           </Button>
         )}
-        <Button type="submit" disabled={save.isPending || (!form.formState.isDirty && !key.trim())}>
-          {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
-        </Button>
-      </div>
+      </SaveBar>
     </form>
   );
 }

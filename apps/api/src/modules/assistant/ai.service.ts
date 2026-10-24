@@ -1,18 +1,24 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
-import { AI_PROVIDERS, aiEndpoint, type AiSettings, type AssistantStatus } from '@shoppos/shared';
+import {
+  AI_PROVIDERS,
+  aiEndpoint,
+  type AiSettings,
+  type AssistantAbilities,
+  type AssistantStatus,
+} from '@shoppos/shared';
 import { AppException } from '../../common/app-exception';
 import { SettingsService } from '../settings/settings.service';
 import { AiError } from './ai-error';
 import { AiKeysService } from './ai-keys.service';
 import { chatJson, listModels } from './ollama';
-import { chatJsonCompat, listCompatModels } from './openai-compat';
+import { chatJsonCompat, listCompatModels, transcribeCompat } from './openai-compat';
 
 /** Online answers come in seconds; a model on a laptop CPU can take much longer. */
 const ONLINE_TIMEOUT_MS = 45_000;
 const LOCAL_TIMEOUT_MS = 120_000;
-/** Protects the free quota (and the laptop): at most this many AI questions a minute. */
-const PER_MINUTE = 20;
+/** Protects the free quota (and the laptop): at most this many AI calls a minute. */
+const PER_MINUTE = 30;
 
 /**
  * The optional AI behind the assistants: a free online service or a model in the shop, as chosen
@@ -46,6 +52,42 @@ export class AiService {
     return `Add the free key for ${AI_PROVIDERS[ai.provider].name} in Settings → Assistant to use the online AI.`;
   }
 
+  /** The service and key that turn voice messages into text (Groq's free Whisper). */
+  private async voiceService() {
+    const ai = this.settings.get('ai');
+    if (ai.mode !== 'online') return null;
+    const id = AI_PROVIDERS[ai.provider].voiceModel ? ai.provider : 'groq';
+    const model = AI_PROVIDERS[id].voiceModel;
+    const key = model ? await this.keys.get(id) : null;
+    return model && key ? { baseUrl: AI_PROVIDERS[id].baseUrl, model, key } : null;
+  }
+
+  /** What anyone signed in may know: is an AI on, and can it read voice messages? */
+  async abilities(): Promise<AssistantAbilities> {
+    return { ai: await this.available(), voice: (await this.voiceService()) !== null };
+  }
+
+  /** A voice message in any language, as text. */
+  async transcribe(audio: Buffer, type: string): Promise<string> {
+    const voice = await this.voiceService();
+    if (!voice)
+      throw new AiError('Voice messages need the free Groq key in Settings → Assistant.', 'no-key');
+    this.rateLimit();
+    try {
+      return await transcribeCompat({
+        baseUrl: voice.baseUrl,
+        apiKey: voice.key,
+        model: voice.model,
+        audio,
+        type,
+        timeoutMs: ONLINE_TIMEOUT_MS,
+      });
+    } catch (err) {
+      if (err instanceof AiError) this.logger.warn(`Voice failed (${err.reason}): ${err.message}`);
+      throw err;
+    }
+  }
+
   /**
    * What the assistant can use now. Online services are not contacted here (so the page opens
    * at once without internet); the local model is, since it is on the shop network.
@@ -53,7 +95,7 @@ export class AiService {
   async status(): Promise<AssistantStatus> {
     const ai = this.settings.get('ai');
     const keys = await this.keys.hints();
-    const base = this.describe(ai, keys);
+    const base = { ...this.describe(ai, keys), voice: (await this.voiceService()) !== null };
     if (ai.mode === 'local') return this.probeLocal(ai, base);
     const ready =
       ai.mode === 'online' &&
@@ -73,7 +115,10 @@ export class AiService {
   /** Try the connection with settings that may not be saved yet (and optionally a new key). */
   async test(ai: AiSettings, newKey?: string): Promise<AssistantStatus> {
     const keys = await this.keys.hints();
-    const base = this.describe(ai, keys);
+    const base = {
+      ...this.describe(ai, keys),
+      voice: ai.mode === 'online' && Boolean(AI_PROVIDERS[ai.provider].voiceModel),
+    };
     if (ai.mode === 'local') return this.probeLocal(ai, base);
     if (ai.mode === 'off') return { ...base, ready: false, problem: 'Choose an AI first.' };
     const key = newKey?.trim() || (await this.keys.get(ai.provider));
@@ -186,7 +231,7 @@ export class AiService {
 
   private async probeLocal(
     ai: AiSettings,
-    base: ReturnType<AiService['describe']>,
+    base: ReturnType<AiService['describe']> & { voice: boolean },
   ): Promise<AssistantStatus> {
     try {
       const models = await listModels(ai.localUrl);
