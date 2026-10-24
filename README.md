@@ -120,6 +120,12 @@ The installer sets up PostgreSQL and the POS as Windows services, HTTPS at `http
 certificate authority trusted only on that laptop, and Chrome (or Edge) in full-screen kiosk mode at
 every start. Step-by-step guide: [docs/WINDOWS-TEST.md](docs/WINDOWS-TEST.md).
 
+### Releases
+
+Set the version in the four `package.json` files, add it to [CHANGELOG.md](CHANGELOG.md), then
+push a tag `v<version>` or publish a release with that tag on GitHub. The `Release` workflow
+checks the code, runs the tests, builds both zips and attaches them to the GitHub release.
+
 ### Backups
 
 `pg_dump` backups (custom format) go to `C:\ShopPOS\backups`: daily at the set time (21:30 by

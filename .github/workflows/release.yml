@@ -1,9 +1,16 @@
-# Builds the Windows release and publishes it on GitHub when a version tag (v1.2.3) is pushed.
+# Builds the Windows release and attaches it to a GitHub Release: when a version tag (v1.2.3) is
+# pushed, or when a release is published on GitHub (Releases → Draft a new release → tag v1.2.3).
 name: Release
 
 on:
   push:
     tags: ['v*']
+  release:
+    types: [published]
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -51,7 +58,10 @@ jobs:
         run: |
           version=$(node -p "require('./package.json').version")
           notes=$(awk "/^## $version/{f=1;next} /^## /{f=0} f" CHANGELOG.md)
-          gh release create "$GITHUB_REF_NAME" \
-            "release/shoppos-$version.zip" \
-            "release/shoppos-$version-offline.zip" \
-            --title "ShopPOS $version" --notes "$notes"
+          files=("release/shoppos-$version.zip" "release/shoppos-$version-offline.zip")
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" \
+              --title "ShopPOS $version" --notes "$notes"
+          fi
