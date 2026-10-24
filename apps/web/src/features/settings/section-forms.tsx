@@ -483,7 +483,7 @@ export function PosForm({ settings }: { settings: AllSettings }) {
         control={form.control}
         name="allowZeroStockSale"
         label="Allow selling items with no stock"
-        hint="The cashier sees a warning, and the sale is written in the audit log."
+        hint="Off (recommended): nobody can bill more than the stock. On: the bill goes through with a warning and is written in the audit log."
       />
       <SwitchRow
         control={form.control}

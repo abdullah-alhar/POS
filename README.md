@@ -19,7 +19,7 @@ logo and colour are set in **Settings → Look**.
 - Keyboard-first billing (F12 lists every key), barcode scanning, held bills, quotations, price check
 - Retail and wholesale prices, line and bill discounts, admin approval for protected actions
 - Stock, purchases, suppliers, returns, CSV/Excel product import, barcode label sheets
-- Warranty and IMEI/serial tracking
+- Warranty on items, printed on the receipt with its end date
 - Customers with credit, cash register (open/close day), expenses
 - Reports, dashboard, audit log
 - Receipt Studio: a full-screen receipt editor with layers, multi-select, styles, print-only-when

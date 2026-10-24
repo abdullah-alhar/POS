@@ -189,7 +189,7 @@ export function designBlocks(
     const b: ReceiptBlock[] = [];
     switch (el.type) {
       case 'logo':
-        b.push({ type: 'logo' });
+        b.push({ type: 'logo', ...(el.align && el.align !== 'center' && { align: el.align }) });
         break;
       case 'text': {
         const filled = fill(el.text);
@@ -258,8 +258,6 @@ export function designBlocks(
             });
           }
           if (el.showSku) b.push({ type: 'text', text: `  Code: ${item.sku}` });
-          if (el.showSerial && item.serialNo)
-            b.push({ type: 'text', text: `  IMEI/SN: ${item.serialNo}` });
           if (el.showWarranty && item.warrantyDays > 0) {
             const until = receiptDate(
               warrantyEnd(new Date(sale.createdAt), item.warrantyDays).toISOString(),
@@ -404,13 +402,11 @@ export function sampleSale(): SaleDto {
     lineTotal: price * qty,
     returnedQty: 0,
     warrantyDays: 0,
-    serialNo: null,
     ...extra,
   });
   const items = [
     item('Anker 20W USB-C Charger', 'White', 1, 450_000, {
       warrantyDays: 365,
-      serialNo: 'AK20W2610145521',
     }),
     item('Tempered Glass', 'iPhone 15', 2, 75_000, {
       discountType: 'PERCENT',

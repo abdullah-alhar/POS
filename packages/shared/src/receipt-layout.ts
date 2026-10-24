@@ -80,7 +80,12 @@ const layer = {
 };
 
 export const receiptElementSchema = z.discriminatedUnion('type', [
-  z.object({ ...layer, type: z.literal('logo') }),
+  z.object({
+    ...layer,
+    type: z.literal('logo'),
+    /** Where the logo sits on the paper (default: centre). */
+    align: z.enum(['left', 'center', 'right']).optional(),
+  }),
   z.object({
     ...layer,
     type: z.literal('text'),
@@ -113,7 +118,6 @@ export const receiptElementSchema = z.discriminatedUnion('type', [
     showSku: z.boolean(),
     showDiscounts: z.boolean(),
     showWarranty: z.boolean(),
-    showSerial: z.boolean(),
     /** 1., 2., 3. in front of each item. */
     numbered: z.boolean().optional(),
   }),
@@ -189,7 +193,6 @@ export function newReceiptElement(type: ReceiptElementType): ReceiptElement {
         showSku: false,
         showDiscounts: true,
         showWarranty: true,
-        showSerial: true,
       };
     case 'qr':
       return { id, type, value: 'https://wa.me/94771234567' };
@@ -232,7 +235,6 @@ const items = (layout: 'two-line' | 'one-line' = 'two-line') =>
     showSku: false,
     showDiscounts: true,
     showWarranty: true,
-    showSerial: true,
   }) as const;
 
 /** Ready-made designs to start from. */
@@ -379,7 +381,6 @@ export function receiptLayoutFromLegacy(old: Record<string, unknown>): ReceiptEl
     showSku: b('showSku', false),
     showDiscounts: b('showItemDiscounts', true),
     showWarranty: b('showWarranty', true),
-    showSerial: b('showSerial', true),
   });
   out.push(
     line(),

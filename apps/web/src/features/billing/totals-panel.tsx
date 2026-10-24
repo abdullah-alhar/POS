@@ -56,6 +56,7 @@ export function TotalsPanel({
   onNew,
   onReprint,
   onOpenDay,
+  payment,
 }: {
   totals: CartTotals;
   session: CashSessionDto | null | undefined;
@@ -69,6 +70,8 @@ export function TotalsPanel({
   onNew: () => void;
   onReprint: () => void;
   onOpenDay: () => void;
+  /** The payment panel, shown under the total instead of the buttons while paying. */
+  payment?: React.ReactNode;
 }) {
   const money = useMoney();
   const billDiscount = useCart((s) => s.billDiscount);
@@ -96,7 +99,7 @@ export function TotalsPanel({
           </p>
         </div>
       ) : (
-        <div className="flex flex-1 flex-col gap-2 p-5">
+        <div className={cn('flex flex-1 flex-col gap-2 p-5', payment && 'min-h-0 overflow-y-auto')}>
           <p className="text-sm font-semibold">
             Current bill
             <span className="text-muted-foreground font-normal"> · {totals.itemCount} item(s)</span>
@@ -135,47 +138,51 @@ export function TotalsPanel({
         </div>
       )}
 
-      <div className="space-y-2 border-t p-4">
-        {session === null ? (
-          <Button size="lg" className="h-16 w-full text-lg" onClick={onOpenDay}>
-            <Sunrise /> Open the day
-          </Button>
-        ) : (
-          <Button size="lg" className="h-16 w-full text-xl" disabled={!hasLines} onClick={onPay}>
-            Pay {hasLines && money(totals.total)}
-            <kbd className="ml-2 rounded bg-white/20 px-1.5 text-xs">F4</kbd>
-          </Button>
-        )}
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" disabled={!hasLines} onClick={onDiscount}>
-            <Percent /> Discount <Key>F8</Key>
-          </Button>
-          <Button variant="outline" disabled={!hasLines} onClick={onHold}>
-            <PauseCircle /> Hold <Key>F6</Key>
-          </Button>
-          <Button variant="outline" onClick={onRecall}>
-            <Inbox /> Held
-            {heldCount > 0 && (
-              <span className="bg-brand text-brand-foreground rounded-full px-1.5 text-[10px]">
-                {heldCount}
-              </span>
-            )}
-            <Key>F7</Key>
-          </Button>
-          <Button variant="outline" onClick={onNew}>
-            <FilePlus2 /> New <Key>F1</Key>
+      {payment ? (
+        <div className="border-t p-4">{payment}</div>
+      ) : (
+        <div className="space-y-2 border-t p-4">
+          {session === null ? (
+            <Button size="lg" className="h-16 w-full text-lg" onClick={onOpenDay}>
+              <Sunrise /> Open the day
+            </Button>
+          ) : (
+            <Button size="lg" className="h-16 w-full text-xl" disabled={!hasLines} onClick={onPay}>
+              Pay {hasLines && money(totals.total)}
+              <kbd className="ml-2 rounded bg-white/20 px-1.5 text-xs">F4</kbd>
+            </Button>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" disabled={!hasLines} onClick={onDiscount}>
+              <Percent /> Discount <Key>F8</Key>
+            </Button>
+            <Button variant="outline" disabled={!hasLines} onClick={onHold}>
+              <PauseCircle /> Hold <Key>F6</Key>
+            </Button>
+            <Button variant="outline" onClick={onRecall}>
+              <Inbox /> Held
+              {heldCount > 0 && (
+                <span className="bg-brand text-brand-foreground rounded-full px-1.5 text-[10px]">
+                  {heldCount}
+                </span>
+              )}
+              <Key>F7</Key>
+            </Button>
+            <Button variant="outline" onClick={onNew}>
+              <FilePlus2 /> New <Key>F1</Key>
+            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            disabled={!lastSaleId}
+            onClick={onReprint}
+          >
+            <Printer /> Print last receipt again <Key>F10</Key>
           </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full"
-          disabled={!lastSaleId}
-          onClick={onReprint}
-        >
-          <Printer /> Print last receipt again <Key>F10</Key>
-        </Button>
-      </div>
+      )}
     </aside>
   );
 }

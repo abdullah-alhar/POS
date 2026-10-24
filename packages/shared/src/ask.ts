@@ -261,7 +261,7 @@ export const HELP_TOPICS: Record<
     title: 'Adding products and prices',
     words: ['product', 'item', 'price', 'add item', 'import', 'excel', 'barcode'],
     answer: [
-      'Products → New product: name, prices, barcode, stock. Warranty and IMEI tracking are there too.',
+      'Products → New product: name, prices, barcode, stock and warranty.',
       'Many at once: Products → Import reads an Excel or CSV list.',
     ],
     page: 'products',
@@ -313,10 +313,11 @@ export const HELP_TOPICS: Record<
     page: 'printer',
   },
   warranty: {
-    title: 'Warranty and IMEI',
-    words: ['warranty', 'imei', 'serial', 'guarantee'],
+    title: 'Warranty',
+    words: ['warranty', 'guarantee'],
     answer: [
-      'Turn on Serial number / IMEI and set the warranty on the product. Type the IMEI on Sales → Bills to find the bill later.',
+      'Set the warranty on the product (Products → the product → Warranty). It is printed on the receipt with its end date.',
+      'To check a warranty later, find the bill on Sales → Bills by its number or the customer.',
     ],
     page: 'sales',
   },

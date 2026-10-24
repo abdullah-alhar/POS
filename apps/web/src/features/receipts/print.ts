@@ -3,15 +3,34 @@ import type { PrinterMode, PrintResult, ReceiptDoc } from '@shoppos/shared';
 import { api, ApiError } from '@/lib/api';
 import { receiptHtml } from './receipt-html';
 
-/** Print an HTML page through a hidden frame. With Chrome's --kiosk-printing it prints silently. */
+/** Only one print at a time: a second print while Chrome's print window is open can hang it. */
+let printing: Promise<void> = Promise.resolve();
+
+/**
+ * Print an HTML page through a frame outside the screen. With Chrome's --kiosk-printing (the
+ * Windows shop setup) it prints silently; otherwise Chrome shows its print window.
+ *
+ * The frame has a real receipt size: a frame of 0 × 0 or a hidden one can leave Chrome's print
+ * preview stuck (a grey screen with a thin white line), which looks like the till froze.
+ */
 export function printHtml(html: string): Promise<void> {
+  const job = printing.then(() => printOnce(html));
+  printing = job.catch(() => undefined);
+  return job;
+}
+
+function printOnce(html: string): Promise<void> {
   return new Promise((resolve) => {
     const frame = document.createElement('iframe');
     frame.setAttribute('aria-hidden', 'true');
+    frame.setAttribute('tabindex', '-1');
     frame.style.cssText =
-      'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+      'position:fixed;left:-10000px;top:0;width:80mm;height:200mm;border:0;opacity:0;pointer-events:none';
     document.body.appendChild(frame);
+    let finished = false;
     const done = () => {
+      if (finished) return;
+      finished = true;
       setTimeout(() => frame.remove(), 1000);
       resolve();
     };
@@ -21,8 +40,15 @@ export function printHtml(html: string): Promise<void> {
       Promise.all(images.map((img) => (img.complete ? null : img.decode().catch(() => null)))).then(
         () => {
           win.addEventListener('afterprint', done, { once: true });
-          win.focus();
-          win.print();
+          // Let the page lay out first; printing in the same moment can give an empty preview.
+          setTimeout(() => {
+            try {
+              win.focus();
+              win.print();
+            } catch {
+              done();
+            }
+          }, 50);
           setTimeout(done, 60_000);
         },
       );

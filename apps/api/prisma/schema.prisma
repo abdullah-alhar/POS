@@ -256,8 +256,6 @@ model Product {
   trackStock   Boolean          @default(true)
   /// Warranty given with the item, in days (0 = none). Printed on the receipt.
   warrantyDays Int              @default(0)
-  /// Ask for the serial number / IMEI when it is sold (one per bill line).
-  trackSerial  Boolean          @default(false)
   isActive     Boolean          @default(true)
   variants     ProductVariant[]
   createdAt    DateTime         @default(now()) @db.Timestamptz(3)
@@ -602,14 +600,11 @@ model SaleItem {
   unitCost          Int              @default(0)
   /// Copied from the product at the time of sale.
   warrantyDays      Int              @default(0)
-  /// Serial number / IMEI of the item sold.
-  serialNo          String?
   returnedQty       Int              @default(0)
   returnItems       SaleReturnItem[]
 
   @@index([saleId])
   @@index([variantId])
-  @@index([serialNo])
 }
 
 model Payment {

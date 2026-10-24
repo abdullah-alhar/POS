@@ -24,6 +24,26 @@ const find = (layout: ReceiptElement[], type: ReceiptElement['type']) =>
   layout.find((e) => e.type === type);
 
 describe('receipt assistant', () => {
+  it('moves the logo (and text) to the left, centre or right', () => {
+    const layout = classic();
+    for (const [q, align] of [
+      ['move the logo to the left', 'left'],
+      ['put the logo on the right', 'right'],
+      ['logo center', 'center'],
+    ] as const) {
+      const r = interpretReceiptCommand(q, layout, []);
+      expect(r.actions, q).toEqual([{ op: 'update', target: 'logo', align }]);
+      const out = applyReceiptActions(layout, r.actions, { copies: 1 });
+      expect(
+        out.layout.find((e) => e.type === 'logo'),
+        q,
+      ).toMatchObject({ align });
+    }
+    expect(interpretReceiptCommand('move the logo to the top', layout, []).actions).toEqual([
+      { op: 'move', target: 'logo', position: 'top' },
+    ]);
+  });
+
   it('makes the total big or small', () => {
     expect(find(run('make the total small').layout, 'totals')).toMatchObject({ bigTotal: false });
     expect(find(run('Please make the total bigger.').layout, 'totals')).toMatchObject({

@@ -108,15 +108,16 @@ Go to **Billing**. The first time, press **Open the day** and type the cash in t
 Add a cashier under **Users** to test PIN approvals (cashiers need an admin PIN for big
 discounts, price changes and voids).
 
-## 4a. Keyboard, warranty, IMEI and the receipt editor
+## 4a. Keyboard, warranty, prices and the receipt editor
 
 | Try this                                                                      | What should happen                                                    |
 | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Scan an item, type `5*` and press Enter                                       | The quantity becomes 5                                                |
 | Press `*`, type 12, Enter / click the quantity and type                       | The quantity changes                                                  |
 | Press **Backspace** (scan box empty), then **Enter**                          | "Remove this item?" → the item is removed                             |
-| Scan a speaker or smart watch (sample data)                                   | A box asks for the IMEI / serial; the line shows it and "1 year"      |
-| Sell it, then search the IMEI in **Sales history**                            | The bill is found; it shows the warranty end date                     |
+| Scan a speaker or smart watch (sample data)                                   | The line shows "1 year" warranty                                      |
+| Click the price on the bill, type a new one, Enter                            | The line shows "Price changed"; a cashier needs the admin PIN to pay  |
+| Sell it, then open the bill in **Sales history**                              | It shows the warranty end date                                        |
 | **Ctrl+Q** with items on the bill                                             | A QUOTATION prints; the bill stays on the screen                      |
 | **Ctrl+I**, scan an item                                                      | Prices, stock and warranty, nothing added                             |
 | **Ctrl+L**, then your PIN                                                     | Locked, then back with the same bill                                  |

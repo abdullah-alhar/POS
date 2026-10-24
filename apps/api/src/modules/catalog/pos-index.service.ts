@@ -72,7 +72,6 @@ export class PosIndexService {
       category: v.product.category?.name ?? null,
       brand: v.product.brand?.name ?? null,
       warrantyDays: v.product.warrantyDays,
-      trackSerial: v.product.trackSerial,
     }));
   }
 }

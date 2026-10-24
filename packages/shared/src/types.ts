@@ -127,7 +127,6 @@ export interface ProductDto {
   taxRate: TaxRateDto | null;
   trackStock: boolean;
   warrantyDays: number;
-  trackSerial: boolean;
   isActive: boolean;
   variants: VariantDto[];
   createdAt: string;
@@ -167,7 +166,6 @@ export interface PosIndexItem {
   category: string | null;
   brand: string | null;
   warrantyDays: number;
-  trackSerial: boolean;
 }
 
 export interface PosIndex {
@@ -193,7 +191,6 @@ export interface SaleItemDto {
   lineTotal: Cents;
   returnedQty: number;
   warrantyDays: number;
-  serialNo: string | null;
 }
 
 export interface PaymentDto {

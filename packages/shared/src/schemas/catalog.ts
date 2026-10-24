@@ -62,8 +62,6 @@ export const productInputSchema = z
     trackStock: z.boolean().default(true),
     /** Warranty in days (0 = none): 7 days, 6 months = 182, 1 year = 365 … */
     warrantyDays: z.int().min(0).max(3650).default(0),
-    /** Ask for the serial number / IMEI when this item is sold. */
-    trackSerial: z.boolean().default(false),
     isActive: z.boolean().default(true),
     variants: z.array(variantInputSchema).min(1, 'A product needs at least one variant').max(200),
   })

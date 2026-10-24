@@ -40,12 +40,9 @@ function LineForm({ line, onClose }: { line: CartLine; onClose: () => void }) {
   const [qty, setQty] = useState(String(line.qty));
   const [price, setPrice] = useState<number>(line.overridePrice ?? list);
   const [discount, setDiscount] = useState<Discount | null>(line.discount);
-  const [serial, setSerial] = useState(line.serialNo ?? '');
 
   const qtyNum = Number(qty);
-  const qtyOk =
-    Number.isInteger(qtyNum) && qtyNum >= 1 && qtyNum <= (line.trackSerial ? 1 : 100_000);
-  const serialOk = !line.trackSerial || serial.trim().length > 0;
+  const qtyOk = Number.isInteger(qtyNum) && qtyNum >= 1 && qtyNum <= 100_000;
   const priceOk = Number.isFinite(price) && price >= 0;
   const preview =
     qtyOk && priceOk
@@ -57,12 +54,11 @@ function LineForm({ line, onClose }: { line: CartLine; onClose: () => void }) {
   const limitBp = settings?.approvals.cashierMaxDiscountBp ?? 1000;
 
   function save() {
-    if (!qtyOk || !priceOk || !serialOk) return;
+    if (!qtyOk || !priceOk) return;
     updateLine(line.key, {
       qty: qtyNum,
       overridePrice: price === list ? null : price,
       discount,
-      ...(line.trackSerial ? { serialNo: serial.trim() } : {}),
     });
     onClose();
   }
@@ -81,28 +77,7 @@ function LineForm({ line, onClose }: { line: CartLine; onClose: () => void }) {
           {line.sku} · normal price {money(list)}
         </DialogDescription>
       </DialogHeader>
-      {line.trackSerial && (
-        <FormField
-          label="Serial number / IMEI"
-          error={serialOk ? undefined : 'Enter the serial number / IMEI'}
-        >
-          <Input
-            value={serial}
-            onChange={(e) => setSerial(e.target.value.replace(/\s+/g, ''))}
-            className="font-mono"
-          />
-        </FormField>
-      )}
-      <FormField
-        label="Quantity"
-        error={
-          qtyOk
-            ? undefined
-            : line.trackSerial
-              ? 'Items with a serial number are sold one per line'
-              : 'Enter a whole number of at least 1'
-        }
-      >
+      <FormField label="Quantity" error={qtyOk ? undefined : 'Enter a whole number of at least 1'}>
         <div className="flex gap-2">
           <Button
             type="button"

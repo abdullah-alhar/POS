@@ -25,7 +25,6 @@ async function shop() {
       .send({
         name: 'Smart Watch',
         warrantyDays: 365,
-        trackSerial: true,
         variants: [
           { retailPrice: 1_000_000, wholesalePrice: 900_000, costPrice: 700_000, openingStock: 10 },
         ],
@@ -37,48 +36,30 @@ async function shop() {
 }
 
 type Http = Awaited<ReturnType<typeof shop>>['adminHttp'];
-const sellWatch = (http: Http, variantId: string, serialNo: string | null, qty = 1) =>
+const sellWatch = (http: Http, variantId: string, qty = 1) =>
   http.post('/api/sales').send({
     clientId: randomUUID(),
     priceMode: 'RETAIL',
-    lines: [{ variantId, qty, listPrice: 1_000_000, unitPrice: 1_000_000, serialNo }],
+    lines: [{ variantId, qty, listPrice: 1_000_000, unitPrice: 1_000_000 }],
     payments: [{ method: 'CASH', amount: qty * 1_000_000 }],
     expectedTotal: qty * 1_000_000,
   });
 
 const text = (doc: ReceiptDoc) => renderText(doc, 48);
 
-describe('warranty and serial numbers', () => {
-  it('needs one serial per line, refuses a serial sold before, and stores the warranty', async () => {
+describe('warranty', () => {
+  it('stores the warranty with the sale and prints its end date', async () => {
     const { adminHttp, watch, variantId } = await shop();
-    expect(watch).toMatchObject({ warrantyDays: 365, trackSerial: true });
+    expect(watch).toMatchObject({ warrantyDays: 365 });
+    expect(watch).not.toHaveProperty('trackSerial');
 
-    await sellWatch(adminHttp, variantId, null).expect(400);
-    await sellWatch(adminHttp, variantId, 'SN-1', 2).expect(400);
-    const sale = (await sellWatch(adminHttp, variantId, ' 356938035643809 ').expect(201)).body.sale;
-    expect(sale.items[0]).toMatchObject({ serialNo: '356938035643809', warrantyDays: 365 });
-    await sellWatch(adminHttp, variantId, '356938035643809').expect(409);
+    const sale = (await sellWatch(adminHttp, variantId, 2).expect(201)).body.sale;
+    expect(sale.items[0]).toMatchObject({ qty: 2, warrantyDays: 365 });
+    expect(sale.items[0]).not.toHaveProperty('serialNo');
 
-    // Found by IMEI in the sales history.
-    const found = (await adminHttp.get('/api/sales?q=35693803564').expect(200)).body;
-    expect(found.items.map((s: { number: string }) => s.number)).toEqual([sale.number]);
-
-    // The receipt shows the IMEI and the warranty end date.
     const receipt = text((await adminHttp.get(`/api/sales/${sale.id}/receipt`).expect(200)).body);
-    expect(receipt).toContain('IMEI/SN: 356938035643809');
     expect(receipt).toMatch(/Warranty: 1 year \(until \d\d\/\d\d\/\d{4}\)/);
-
-    // After a return, the same IMEI can be sold again.
-    await adminHttp
-      .post('/api/returns')
-      .send({
-        saleId: sale.id,
-        reason: 'Exchange',
-        refundMethod: 'CASH',
-        items: [{ saleItemId: sale.items[0].id, qty: 1 }],
-      })
-      .expect(201);
-    await sellWatch(adminHttp, variantId, '356938035643809').expect(201);
+    expect(receipt).not.toMatch(/IMEI|SN:/);
   });
 
   it('has warranty labels and end dates people understand', () => {
@@ -149,7 +130,7 @@ describe('receipt designer', () => {
 
   it('previews an unsaved design on the latest bill', async () => {
     const { adminHttp, cashierHttp, variantId } = await shop();
-    await sellWatch(adminHttp, variantId, 'SN-77').expect(201);
+    await sellWatch(adminHttp, variantId).expect(201);
     const receipt = {
       ...DEFAULT_SETTINGS.receipt,
       copies: 2,
@@ -178,7 +159,6 @@ describe('receipt designer', () => {
           showSku: false,
           showDiscounts: true,
           showWarranty: true,
-          showSerial: true,
         },
         { id: 'e', type: 'totals' },
         { id: 'f', type: 'qr', value: 'https://wa.me/94771234567' },
@@ -197,7 +177,6 @@ describe('receipt designer', () => {
     expect(out).toContain('TAX INVOICE');
     expect(out).not.toContain('Cashier:');
     expect(out).not.toContain('Customer:'); // no customer on the bill: the line is left out
-    expect(out).toContain('IMEI/SN: SN-77');
     expect(res.body.pieces.map((p: { id: string }) => p.id)).toEqual([
       'a',
       'b',
@@ -252,5 +231,44 @@ describe('receipt designer', () => {
     expect(hex).toContain('1d286b0500315030' + Buffer.from('hi').toString('hex')); // store QR data
     expect(hex).toContain('1d286b0300315130'); // print QR
     expect(hex.split('1d564200').length - 1).toBe(2); // cut between copies and at the end
+  });
+});
+
+describe('what each user may see', () => {
+  it('lets an admin hide the Sales page from a cashier and show it again', async () => {
+    const { adminHttp, cashierHttp, cashier, variantId } = await shop();
+    // The cashier can sell and see the bills…
+    await sellWatch(cashierHttp, variantId).expect(201);
+    await cashierHttp.get('/api/sales').expect(200);
+    const me = (await cashierHttp.get('/api/auth/me').expect(200)).body;
+    const without = me.permissions.filter((p: string) => p !== 'sales.view');
+
+    // …until the admin unticks "See the Sales page": selling still works, past bills are hidden.
+    await adminHttp.patch(`/api/users/${cashier.id}`).send({ permissions: without }).expect(200);
+    await cashierHttp.get('/api/sales').expect(403);
+    await sellWatch(cashierHttp, variantId).expect(201);
+
+    // Ticked again: back.
+    await adminHttp
+      .patch(`/api/users/${cashier.id}`)
+      .send({ permissions: [...without, 'sales.view'] })
+      .expect(200);
+    await cashierHttp.get('/api/sales').expect(200);
+  });
+});
+
+describe('receipt logo position', () => {
+  it('prints the logo on the left, in the middle or on the right', () => {
+    const logo = { width: 8, height: 1, data: Buffer.from([0xff]).toString('base64') };
+    const bytes = (align?: 'left' | 'center' | 'right') =>
+      encodeReceipt(
+        { blocks: [{ type: 'logo', ...(align && { align }) }] },
+        { charsPerLine: 48, logo, autoCut: false, feedLines: 0, openDrawer: false },
+      );
+    // ESC a n (0 left, 1 centre, 2 right), then the image (GS v 0).
+    const justify = (b: Buffer) => b[b.indexOf(Buffer.from([0x1d, 0x76, 0x30])) - 1];
+    expect(justify(bytes())).toBe(1);
+    expect(justify(bytes('left'))).toBe(0);
+    expect(justify(bytes('right'))).toBe(2);
   });
 });

@@ -552,12 +552,8 @@ function PriceCheckBody() {
               )}
             </div>
           </div>
-          {(item.warrantyDays > 0 || item.trackSerial) && (
-            <p className="text-sm">
-              {item.warrantyDays > 0 && `Warranty: ${warrantyLabel(item.warrantyDays)}`}
-              {item.warrantyDays > 0 && item.trackSerial && ' · '}
-              {item.trackSerial && 'Serial / IMEI recorded when sold'}
-            </p>
+          {item.warrantyDays > 0 && (
+            <p className="text-sm">Warranty: {warrantyLabel(item.warrantyDays)}</p>
           )}
         </div>
       )}

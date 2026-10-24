@@ -36,13 +36,13 @@ export class SalesController {
   }
 
   @Get()
-  @RequirePermissions('sales.create')
+  @RequirePermissions('sales.view')
   list(@Query(new ZodPipe(saleQuerySchema)) query: SaleQuery, @CurrentActor() actor: Actor) {
     return this.sales.list(query, actor);
   }
 
   @Get(':id')
-  @RequirePermissions('sales.create')
+  @RequirePermissions('sales.view')
   get(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: Actor) {
     return this.sales.get(id, actor);
   }

@@ -75,7 +75,6 @@ function toFormValues(p: ProductDto): FormValues {
     taxRateId: p.taxRateId,
     trackStock: p.trackStock,
     warrantyDays: p.warrantyDays,
-    trackSerial: p.trackSerial,
     isActive: p.isActive,
     variants: p.variants.map((v) => ({
       id: v.id,
@@ -129,7 +128,6 @@ function ProductForm({ product }: { product: ProductDto | null }) {
           taxRateId: null,
           trackStock: true,
           warrantyDays: 0,
-          trackSerial: false,
           isActive: true,
           variants: [blankVariant()],
         },
@@ -262,12 +260,6 @@ function ProductForm({ product }: { product: ProductDto | null }) {
                 name="isActive"
                 label="Active"
                 hint="Hidden products cannot be sold"
-              />
-              <SwitchField
-                control={control}
-                name="trackSerial"
-                label="Serial number / IMEI"
-                hint="Ask for it at the till; printed on the receipt"
               />
               <Controller
                 control={control}
@@ -589,7 +581,7 @@ function SwitchField({
   hint,
 }: {
   control: Control<FormValues, unknown, ProductInputParsed>;
-  name: 'trackStock' | 'isActive' | 'trackSerial';
+  name: 'trackStock' | 'isActive';
   label: string;
   hint: string;
 }) {
@@ -599,11 +591,7 @@ function SwitchField({
       name={name}
       render={({ field }) => (
         <div className="flex items-center gap-3">
-          <Switch
-            id={name}
-            checked={field.value ?? name !== 'trackSerial'}
-            onCheckedChange={field.onChange}
-          />
+          <Switch id={name} checked={field.value ?? true} onCheckedChange={field.onChange} />
           <div>
             <Label htmlFor={name}>{label}</Label>
             <p className="text-muted-foreground text-xs">{hint}</p>

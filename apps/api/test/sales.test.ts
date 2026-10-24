@@ -181,7 +181,14 @@ describe('checkout', () => {
   });
 
   it('sells with no stock when allowed, warns and writes the audit log', async () => {
-    const { cashierHttp, glass } = await shop();
+    const { cashierHttp, adminHttp, glass } = await shop();
+    const pos = (await adminHttp.get('/api/settings').expect(200)).body.pos;
+    // A new shop does not sell more than the stock; the owner can allow it.
+    expect(pos.allowZeroStockSale).toBe(false);
+    await adminHttp
+      .put('/api/settings/pos')
+      .send({ ...pos, allowZeroStockSale: true })
+      .expect(200);
     const res = await cashierHttp
       .post('/api/sales')
       .send(bill([{ variantId: glass.id, qty: 3, listPrice: 60_000, unitPrice: 60_000 }], 180_000))

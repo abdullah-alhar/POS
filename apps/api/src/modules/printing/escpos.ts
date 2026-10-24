@@ -29,7 +29,7 @@ type Op =
       underline?: boolean;
       invert?: boolean;
     }
-  | { kind: 'logo' }
+  | { kind: 'logo'; align: ReceiptAlign }
   | { kind: 'barcode'; value: string }
   | { kind: 'qr'; value: string; size?: 'small' | 'medium' | 'large' }
   | { kind: 'feed'; lines: number }
@@ -90,7 +90,7 @@ export function layout(doc: ReceiptDoc, charsPerLine: number): Op[] {
   for (const block of doc.blocks) {
     switch (block.type) {
       case 'logo':
-        ops.push({ kind: 'logo' });
+        ops.push({ kind: 'logo', align: block.align ?? 'center' });
         break;
       case 'feed':
         ops.push({ kind: 'feed', lines: block.lines });
@@ -224,10 +224,10 @@ export function drawerKick(): Buffer {
   return Buffer.from([ESC, 0x70, 0, 25, 250, ESC, 0x70, 1, 25, 250]);
 }
 
-function rasterLogo(out: Bytes, logo: PrinterLogo) {
+function rasterLogo(out: Bytes, logo: PrinterLogo, align: ReceiptAlign) {
   const data = Buffer.from(logo.data, 'base64');
   const bytesPerRow = Math.ceil(logo.width / 8);
-  out.push(ESC, 0x61, 1);
+  out.push(ESC, 0x61, ALIGN[align]);
   // Send in bands of 128 rows; some printers have small buffers.
   for (let y = 0; y < logo.height; y += 128) {
     const rows = Math.min(128, logo.height - y);
@@ -246,7 +246,7 @@ export function encodeReceipt(doc: ReceiptDoc, opts: EscPosOptions): Buffer {
   for (const op of layout(doc, opts.charsPerLine)) {
     switch (op.kind) {
       case 'logo':
-        if (opts.logo) rasterLogo(out, opts.logo);
+        if (opts.logo) rasterLogo(out, opts.logo, op.align);
         break;
       case 'feed':
         out.push(ESC, 0x64, Math.min(op.lines, 10));

@@ -30,7 +30,7 @@ export function qrSvg(value: string, cell = 3) {
 export function blockHtml(b: ReceiptBlock, logo: string | null): string {
   switch (b.type) {
     case 'logo':
-      return `<div class="logo">${logo ? `<img src="${logo}" alt="">` : builtInLogoSvg()}</div>`;
+      return `<div class="logo"${b.align && b.align !== 'center' ? ` style="text-align:${b.align}"` : ''}>${logo ? `<img src="${logo}" alt="">` : builtInLogoSvg()}</div>`;
     case 'divider':
       return `<div class="hr${b.char ? ` ${DIVIDER_CLASS[b.char]}` : ''}"></div>`;
     case 'feed':
@@ -78,7 +78,7 @@ ${s}.cut { border-top: 1px dashed #999; margin: 8mm 0 4mm; break-after: page; }`
 export function receiptHtml(doc: ReceiptDoc, logo: string | null): string {
   const body = doc.blocks.map((b) => blockHtml(b, logo)).join('');
   return `<!doctype html><html><head><meta charset="utf-8"><title>Receipt</title><style>
-@page { size: 80mm auto; margin: 0; }
+@page { margin: 0; }
 * { box-sizing: border-box; }
 body { margin: 0; padding: 3mm 4mm 6mm; width: 80mm; color: #000; background: #fff;
   font: 12px/1.35 'Consolas', 'Courier New', monospace; }

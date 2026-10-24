@@ -9,7 +9,6 @@ import {
   PAYMENT_METHOD_LABELS,
   summarizePayments,
   type CheckoutInput,
-  type CheckoutLineInput,
   type QuoteInput,
   quoteSchema,
   type CheckoutResult,
@@ -88,7 +87,6 @@ export function toSaleDto(s: SaleWithRelations): SaleDto {
       lineTotal: i.lineTotal,
       returnedQty: i.returnedQty,
       warrantyDays: i.warrantyDays,
-      serialNo: i.serialNo,
     })),
     payments: s.payments.map((p) => ({
       method: p.method,
@@ -202,7 +200,6 @@ export class SalesService {
           lineTotal: r.lineTotal,
           returnedQty: 0,
           warrantyDays: v.product.warrantyDays,
-          serialNo: null,
         };
       }),
       payments: [],
@@ -272,8 +269,6 @@ export class SalesService {
         },
       );
     }
-
-    await this.checkSerials(input.lines, byId);
 
     // Work the bill out again on the server.
     let calc: ReturnType<typeof calculateCart>;
@@ -404,7 +399,6 @@ export class SalesService {
                   lineTotal: r.lineTotal,
                   unitCost: v.costPrice,
                   warrantyDays: v.product.warrantyDays,
-                  serialNo: l.serialNo?.trim() || null,
                 };
               }),
             },
@@ -522,44 +516,6 @@ export class SalesService {
     }
   }
 
-  /**
-   * Items with a serial number / IMEI are sold one per line, with the number typed or scanned, and
-   * the same number cannot be sold twice (unless the earlier sale was voided or returned).
-   */
-  private async checkSerials(
-    lines: CheckoutLineInput[],
-    byId: Map<string, { name: string; product: { name: string; trackSerial: boolean } }>,
-  ) {
-    const seen = new Set<string>();
-    for (const l of lines) {
-      const v = byId.get(l.variantId)!;
-      const serial = l.serialNo?.trim();
-      if (!v.product.trackSerial) continue;
-      const name = variantLabel(v.product.name, v.name);
-      if (!serial) throw badRequest(`Enter the serial number / IMEI of "${name}"`);
-      if (l.qty !== 1)
-        throw badRequest(
-          `"${name}" has a serial number, so sell it one at a time (quantity 1 per line)`,
-        );
-      if (seen.has(serial.toUpperCase()))
-        throw badRequest(`Serial number / IMEI ${serial} is on the bill twice`);
-      seen.add(serial.toUpperCase());
-    }
-    if (!seen.size) return;
-    const sold = await this.prisma.saleItem.findFirst({
-      where: {
-        serialNo: { in: [...seen], mode: 'insensitive' },
-        sale: { status: 'COMPLETED' },
-        returnedQty: 0,
-      },
-      select: { serialNo: true, sale: { select: { number: true } } },
-    });
-    if (sold)
-      throw conflict(
-        `Serial number / IMEI ${sold.serialNo} was already sold on bill ${sold.sale.number}`,
-      );
-  }
-
   private async findByClientId(clientId: string) {
     const sale = await this.prisma.sale.findUnique({ where: { clientId }, include: saleInclude });
     return sale ? toSaleDto(sale) : null;
@@ -572,11 +528,10 @@ export class SalesService {
       status: query.status === 'all' ? undefined : query.status,
       cashierId: hasPermission(actor.user, 'sales.viewAll') ? query.cashierId : actor.user.id,
     };
-    // Bill number, IMEI / serial number, or customer name / phone.
+    // Bill number, or customer name / phone.
     if (query.q) {
       where.OR = [
         { number: { contains: query.q.toUpperCase() } },
-        { items: { some: { serialNo: { contains: query.q, mode: 'insensitive' } } } },
         { customer: { name: { contains: query.q, mode: 'insensitive' } } },
         { customer: { phone: { contains: query.q.replace(/\s/g, '') } } },
       ];
